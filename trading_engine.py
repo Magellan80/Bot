@@ -6,6 +6,7 @@ from typing import Dict, Optional, Any, List, Tuple
 import asyncio
 
 from config import get_current_mode, load_settings, save_settings
+from smart_filters_v3 import _GLOBAL_FILTERS as smartfilters
 
 
 class PositionSide(Enum):
@@ -722,7 +723,7 @@ class TradingEngine:
             return
 
         # хаотичный режим инструмента
-        if isinstance(symbol_regime, str) and symbol_regime.lower() == "chaotic":
+        if isinstance(symbol_regime, str) and symbol_regime.lower() == "chaos":
             self.log_trade(
                 f"event=SYMBOL_REGIME_SKIP;symbol={symbol};symbol_regime={symbol_regime}"
             )
@@ -799,6 +800,7 @@ class TradingEngine:
                     h = highs[0]
                     l = lows[0]
                     c = closes[0]
+
                     if c > 0:
                         range_pct = (h - l) / c * 100 if h > l else 0.0
                     else:
@@ -993,7 +995,7 @@ class TradingEngine:
             "mae": 0.0,
             "price_history": [price],
 
-            # --- факторы для execution feedback (пока не используются) ---
+            # --- факторы для execution feedback ---
             "trend_score": s.get("trend_score"),
             "btc_regime": s.get("btc_regime"),
             "symbol_regime": s.get("symbol_regime"),
@@ -1218,8 +1220,21 @@ class TradingEngine:
         # --- определяем, был ли стоп ---
         stopped_out = reason.upper().startswith("SL")
 
-        # feedback отключён (SmartFilters v4.0 не использует обучение)
-        pass
+        # --- отправляем feedback в SmartFilters ---
+        try:
+            smartfilters.register_execution_feedback(
+                trend_score=pos.get("trend_score"),
+                btc_regime=pos.get("btc_regime"),
+                symbol_regime=pos.get("symbol_regime"),
+                volatility_score=pos.get("volatility_score"),
+                structure_score=pos.get("structure_score"),
+                liquidity_score=pos.get("liquidity_score"),
+                pattern_quality=pos.get("pattern_quality"),
+                pnl_r=float(pnl_r),
+                stopped_out=bool(stopped_out),
+            )
+        except Exception as e:
+            self._register_internal_error(f"close_position:feedback_error:{repr(e)}")
 
         # --- удаляем позицию ---
         self.positions.pop(symbol, None)
@@ -1276,6 +1291,7 @@ class TradingEngine:
                 entry = float(rp.get("avgPrice", 0) or 0)
 
                 trade_id = f"{symbol}-RESTORE-{int(time.time())}"
+
                 self.positions[symbol] = {
                     "trade_id": trade_id,
                     "symbol": symbol,

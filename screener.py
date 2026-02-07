@@ -7,28 +7,6 @@ import pandas as pd
 import mplfinance as mpf
 from aiogram.types import BufferedInputFile
 
-# ============================
-#   DIAGNOSTIC MODE
-# ============================
-
-DEBUG_SIGNALS = True   # включить/выключить диагностику
-
-
-def dbg(symbol: str, msg: str):
-    """Пишет диагностическую строку в signals_debug.log."""
-    if not DEBUG_SIGNALS:
-        return
-    try:
-        with open("signals_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {symbol} | {msg}\n")
-    except:
-        pass
-
-
-# ============================
-#   ORIGINAL IMPORTS
-# ============================
-
 from config import get_current_mode
 from data_layer import (
     fetch_tickers,
@@ -54,7 +32,9 @@ from context import (
     format_delta_text,
 )
 from detectors import (
-    detect_signal,
+    detect_big_pump,
+    detect_big_dump,
+    detect_pump_reversal,
     adjust_rating_with_context,
     detector,
 )
@@ -72,11 +52,6 @@ from footprint import (
 from smart_filters_v3 import apply_smartfilters_v3
 from symbol_memory import update_symbol_memory, get_symbol_memory
 
-
-# ============================
-#   GLOBALS
-# ============================
-
 SYMBOL_COOLDOWN = 300
 _last_signal_ts = {}
 
@@ -86,10 +61,6 @@ _BTC_CTX_CACHE = {
     "regime": "neutral",
 }
 
-
-# ============================
-#   BASIC HELPERS
-# ============================
 
 def symbol_on_cooldown(symbol: str) -> bool:
     ts = _last_signal_ts.get(symbol)
@@ -118,10 +89,6 @@ def log_error(e: Exception):
         )
         f.write(traceback.format_exc() + "\n")
 
-
-# ============================
-#   TECHNICAL CALCULATIONS
-# ============================
 
 def apply_reversal_filters(signal_type, closes, highs, lows, volumes, delta_status):
     if len(closes) < 5:
@@ -275,7 +242,12 @@ def compute_atr_from_klines(klines, period: int = 14) -> float:
     return atr
 
 
-def build_htf_liquidity_light(closes, highs, lows, structure: str):
+def build_htf_liquidity_light(
+    closes,
+    highs,
+    lows,
+    structure: str,
+):
     try:
         swings = detect_swings(closes, highs, lows)
         if not swings:
@@ -481,8 +453,8 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
 
         total_vol = bid_vol + ask_vol
 
-        max_spread_pct = 1.5
-        min_total_vol = 50.0
+        max_spread_pct = 0.5
+        min_total_vol = 500.0
 
         ok = True
         if spread_pct > max_spread_pct:
@@ -523,6 +495,7 @@ def compute_impulse_score(closes, volumes):
 
         if abs(acc1) > 0.2 and abs(acc2) > 0.2 and vol_spike > 20:
             score += 5.0
+
         if abs(d01) < 0.05 and vol_spike < -20:
             score -= 3.0
 
@@ -535,64 +508,6 @@ def compute_impulse_score(closes, volumes):
     except Exception as e:
         log_error(e)
         return 0.0
-
-
-def compute_fusion_score(sf_result: dict, rev_result: dict, trend_score: int, risk_score: int) -> dict:
-    sf_conf = float(sf_result.get("confidence", 0.0))
-    rev_rating = int(rev_result.get("rating", 0)) if rev_result else 0
-    rev_dir = rev_result.get("reversal") if rev_result else None
-
-    rev_norm = max(0.0, min(1.0, rev_rating / 100.0))
-
-    market_ctx = sf_result.get("market_ctx") or {}
-    symbol_regime = sf_result.get("symbol_regime") or {}
-
-    market_regime = market_ctx.get("market_regime")
-    market_risk = market_ctx.get("risk")
-    sym_regime = symbol_regime.get("regime")
-
-    w_sf = 0.6
-    w_rev = 0.4
-
-    if rev_dir is None or rev_rating < 30:
-        fusion = sf_conf * 0.75
-    else:
-        fusion = sf_conf * w_sf + rev_norm * w_rev
-
-    if abs(trend_score) > 3 and rev_dir is not None:
-        if (trend_score > 0 and rev_dir == "bearish") or (trend_score < 0 and rev_dir == "bullish"):
-            fusion *= 0.9
-        else:
-            fusion *= 1.05
-
-    if market_regime == "trending":
-        fusion *= 1.03
-    if market_regime == "chaotic":
-        fusion *= 0.9
-
-    if sym_regime in ("pumpy", "dumpy"):
-        fusion *= 1.03
-
-    if market_risk == "high" or risk_score > 80:
-        fusion *= 0.9
-    elif market_risk == "low" or risk_score < 30:
-        fusion *= 1.03
-
-    fusion = max(0.0, min(1.0, fusion))
-
-    if fusion < 0.4:
-        band = "low"
-    elif fusion < 0.65:
-        band = "medium"
-    elif fusion < 0.8:
-        band = "high"
-    else:
-        band = "extreme"
-
-    return {
-        "fusion_score": fusion,
-        "band": band,
-    }
 
 
 async def compute_btc_stability(session):
@@ -639,31 +554,20 @@ async def compute_btc_stability(session):
         return _BTC_CTX_CACHE
 
 
-# ============================
-#   CORE ANALYSIS (PUMP MODE)
-# ============================
-
 async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
     mode_key, mode_cfg = get_current_mode()
 
-    # === COOLDOWN ===
     if symbol_on_cooldown(symbol):
-        dbg(symbol, "SKIP: cooldown active")
         return None
 
-    # === TURNOVER FILTER ===
     turnover = float(ticker_info.get("turnover24h", 0))
     if turnover < mode_cfg["volume_usdt"]:
-        dbg(symbol, f"SKIP: low turnover {turnover}")
         return None
 
-    # === FETCH 1M KLINES ===
     klines_1m = await fetch_klines(session, symbol, interval="1", limit=80)
     if not klines_1m or len(klines_1m) < 40:
-        dbg(symbol, "SKIP: insufficient klines_1m")
         return None
 
-    opens_1m = [float(c[1]) for c in klines_1m]
     closes_1m = [float(c[4]) for c in klines_1m]
     highs_1m = [float(c[2]) for c in klines_1m]
     lows_1m = [float(c[3]) for c in klines_1m]
@@ -671,7 +575,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     last_price = closes_1m[0]
 
-    # === ORDERBOOK ===
     orderbook = await fetch_orderbook(session, symbol, limit=50)
     liquidity = build_liquidity_map(orderbook, last_price)
 
@@ -682,10 +585,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     ob_ok, ob_meta = evaluate_orderbook_quality(orderbook, last_price)
     if not ob_ok:
-        dbg(symbol, "SKIP: bad orderbook")
         return None
 
-    # === OPEN INTEREST ===
     oi_now, oi_prev = await fetch_open_interest(session, symbol)
     oi_status = None
     if oi_now is not None and oi_prev is not None:
@@ -696,31 +597,24 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         else:
             oi_status = "flat"
 
-    # === FUNDING ===
     funding_rate = await fetch_funding_rate(session, symbol)
 
-    # === LIQUIDATIONS ===
     long_liq, short_liq = await fetch_liquidations(session, symbol, minutes=15)
     liq_status = interpret_liquidations(long_liq, short_liq)
 
-    # === TRADES ===
     trades = await fetch_recent_trades(session, symbol, limit=200)
     flow_status = analyze_flow_from_trades(trades)
     delta_status = analyze_delta_from_trades(trades)
 
-    # === MICROSTRUCTURE ===
     clusters = build_price_buckets(trades)
     micro = analyze_microstructure(clusters, last_price)
 
-    # === FOOTPRINT ===
     current_high = highs_1m[0]
     current_low = lows_1m[0]
     footprint_zones = compute_footprint_zones(trades, current_high, current_low)
 
-    # === TREND SCORE ===
     trend_score = await compute_trend_score(session, symbol)
 
-    # === HTF CONTEXT ===
     htf = await compute_htf_context(session, symbol)
     trend_15m = htf["trend_15m"]
     trend_1h = htf["trend_1h"]
@@ -746,7 +640,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     htf_liq_1h = htf.get("htf_liquidity_1h", {}) or {}
     htf_liq_4h = htf.get("htf_liquidity_4h", {}) or {}
 
-    # === RISK SCORE ===
     risk_score = compute_risk_score(
         closes_1m,
         oi_status,
@@ -757,40 +650,59 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         trend_score,
     )
 
-    # === detect_signal() — PUMP/DUMP слой ===
-    base_signal = detect_signal(
-        closes_1m,
-        highs_1m,
-        lows_1m,
-        volumes_1m,
-        mode_cfg,
-    ) if callable(detect_signal) else None
+    is_pump, pump_rating = detect_big_pump(closes_1m, highs_1m, lows_1m, volumes_1m, mode_cfg)
+    is_dump, dump_rating = detect_big_dump(closes_1m, highs_1m, lows_1m, volumes_1m, mode_cfg)
+    is_rev_pump, rev_pump_rating = detect_pump_reversal(closes_1m, highs_1m, lows_1m, volumes_1m)
 
-    signal_type = None
-    signal_rating = None
-
-    if base_signal:
-        signal_type = base_signal.get("type")
-        signal_rating = base_signal.get("rating")
-        dbg(symbol, f"detect_signal: {signal_type} rating={signal_rating}")
-
-    # === REVERSAL DETECTOR (Dump→Pump / Pump→Dump) ===
     rev = detector.analyze(closes_1m, highs_1m, lows_1m, volumes_1m)
+    habr = detector.analyze_habr(closes_1m, highs_1m, lows_1m, volumes_1m)
 
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
 
-    # === BTC CONTEXT ===
     btc_ctx = await compute_btc_stability(session)
     btc_factor = btc_ctx["factor"]
     btc_regime = btc_ctx["regime"]
 
     candidates = []
 
-    # === detect_signal как самостоятельный сигнал (PUMP/DUMP) ===
-    if signal_type and signal_rating is not None and signal_rating >= min_score:
-        ds_adj = adjust_rating_with_context(
-            signal_rating,
-            signal_type,
+    # === HABR STRATEGY ===
+    if habr and habr.get("rating", 0) >= min_score:
+        direction = "Dump → Pump" if habr["direction"] == "bullish" else "Pump → Dump"
+        habr_rating = habr["rating"]
+
+        if habr["direction"] == "bullish" and trend_score < -3:
+            habr_rating *= 0.7
+        if habr["direction"] == "bearish" and trend_score > 3:
+            habr_rating *= 0.7
+
+        if habr["direction"] == "bullish":
+            if trend_1h < -2 or trend_4h < -2:
+                habr_rating *= 0.55
+            elif trend_1h > 2 and trend_4h >= 0:
+                habr_rating *= 1.15
+        else:
+            if trend_1h > 2 or trend_4h > 2:
+                habr_rating *= 0.55
+            elif trend_1h < -2 and trend_4h <= 0:
+                habr_rating *= 1.15
+
+        fbias = funding_bias(funding_rate) if funding_rate is not None else None
+        if fbias == "bullish" and habr["direction"] == "bearish":
+            habr_rating *= 0.85
+        if fbias == "bearish" and habr["direction"] == "bullish":
+            habr_rating *= 0.85
+
+        if oi_status == "falling":
+            habr_rating *= 0.9
+
+        if habr["direction"] == "bullish" and delta_status == "bearish":
+            habr_rating *= 0.9
+        if habr["direction"] == "bearish" and delta_status == "bullish":
+            habr_rating *= 0.9
+
+        habr_adj = adjust_rating_with_context(
+            habr_rating,
+            f"HABR {direction}",
             closes_1m,
             oi_now,
             oi_prev,
@@ -801,23 +713,302 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             trend_score,
             risk_score,
         )
-        ds_adj += apply_reversal_filters(
-            signal_type,
-            closes_1m,
-            highs_1m,
-            lows_1m,
-            volumes_1m,
-            delta_status,
-        )
 
-        dbg(symbol, f"detect_signal OK: {signal_type} adj={ds_adj}")
+        if (
+            habr_adj >= min_score
+            and rev.get("reversal")
+            and rev.get("rating", 0) >= min_score
+            and (
+                (habr["direction"] == "bullish" and rev["reversal"] == "bullish")
+                or (habr["direction"] == "bearish" and rev["reversal"] == "bearish")
+            )
+        ):
+            rev_direction = "Dump → Pump" if rev["reversal"] == "bullish" else "Pump → Dump"
+            rev_adj = adjust_rating_with_context(
+                rev["rating"],
+                f"REVERSAL {rev_direction}",
+                closes_1m,
+                oi_now,
+                oi_prev,
+                funding_rate,
+                liq_status,
+                flow_status,
+                delta_status,
+                trend_score,
+                risk_score,
+            )
+            hybrid_rating = int((habr_adj + rev_adj) / 2 + 15)
+
+            candidates.append({
+                "symbol": symbol,
+                "type": f"HYBRID Habr+Reversal {direction} ({mode_key})",
+                "emoji": "💎",
+                "price": last_price,
+                "rating": hybrid_rating,
+                "oi": oi_status,
+                "funding": funding_rate,
+                "liq": liq_status,
+                "flow": flow_status,
+                "delta": delta_status,
+                "trend_score": trend_score,
+                "risk_score": risk_score,
+                "trend_15m": trend_15m,
+                "trend_1h": trend_1h,
+                "trend_4h": trend_4h,
+                "meta_closes": closes_1m,
+                "meta_highs": highs_1m,
+                "meta_lows": lows_1m,
+                "liq_map_bias": liq_bias,
+                "liq_map_strongest": liq_strongest,
+                "liq_map_vac_up": liq_vac_up,
+                "liq_map_vac_down": liq_vac_down,
+            })
+
+            pump_side = None
+            if is_pump and pump_rating >= min_score:
+                pump_side = "bullish"
+            if is_dump and dump_rating >= min_score:
+                pump_side = "bearish"
+
+            if pump_side and (
+                (pump_side == "bullish" and habr["direction"] == "bullish" and rev["reversal"] == "bullish")
+                or (pump_side == "bearish" and habr["direction"] == "bearish" and rev["reversal"] == "bearish")
+            ):
+                super_rating = int((hybrid_rating + max(pump_rating, rev_adj, habr_adj)) / 2 + 20)
+
+                candidates.append({
+                    "symbol": symbol,
+                    "type": f"SUPER HYBRID Habr+Reversal+Pump {direction} ({mode_key})",
+                    "emoji": "💠",
+                    "price": last_price,
+                    "rating": super_rating,
+                    "oi": oi_status,
+                    "funding": funding_rate,
+                    "liq": liq_status,
+                    "flow": flow_status,
+                    "delta": delta_status,
+                    "trend_score": trend_score,
+                    "risk_score": risk_score,
+                    "trend_15m": trend_15m,
+                    "trend_1h": trend_1h,
+                    "trend_4h": trend_4h,
+                    "meta_closes": closes_1m,
+                    "meta_highs": highs_1m,
+                    "meta_lows": lows_1m,
+                    "liq_map_bias": liq_bias,
+                    "liq_map_strongest": liq_strongest,
+                    "liq_map_vac_up": liq_vac_up,
+                    "liq_map_vac_down": liq_vac_down,
+                })
+
+            # === ULTRA HYBRID v6 ===
+            liquidity_score = 0.0
+
+            if liq_bias == "bullish":
+                liquidity_score += 1.5
+            elif liq_bias == "bearish":
+                liquidity_score -= 1.5
+
+            if liq_strongest:
+                side, (lz_price, lz_size) = liq_strongest
+                if side == "up":
+                    liquidity_score -= 1.0
+                elif side == "down":
+                    liquidity_score += 1.0
+
+            if liq_vac_up >= 5:
+                liquidity_score += 0.5
+            if liq_vac_down >= 5:
+                liquidity_score -= 0.5
+
+            htf_liq_bias_1h = htf_liq_1h.get("liquidity_bias", "balanced")
+            htf_liq_bias_4h = htf_liq_4h.get("liquidity_bias", "balanced")
+
+            if direction == "Dump → Pump":
+                if htf_liq_bias_1h == "below":
+                    liquidity_score += 1.0
+                if htf_liq_bias_4h == "below":
+                    liquidity_score += 1.0
+                if htf_liq_bias_1h == "above":
+                    liquidity_score -= 1.0
+                if htf_liq_bias_4h == "above":
+                    liquidity_score -= 1.0
+            else:
+                if htf_liq_bias_1h == "above":
+                    liquidity_score += 1.0
+                if htf_liq_bias_4h == "above":
+                    liquidity_score += 1.0
+                if htf_liq_bias_1h == "below":
+                    liquidity_score -= 1.0
+                if htf_liq_bias_4h == "below":
+                    liquidity_score -= 1.0
+
+            ultra_ok = False
+            if direction == "Dump → Pump":
+                if (
+                    delta_status == "bullish"
+                    and oi_status == "rising"
+                    and trend_1h > 0
+                    and trend_4h >= 0
+                ):
+                    ultra_ok = True
+            else:
+                if (
+                    delta_status == "bearish"
+                    and oi_status == "rising"
+                    and trend_1h < 0
+                    and trend_4h <= 0
+                ):
+                    ultra_ok = True
+
+            htf_ok = False
+            if direction == "Dump → Pump":
+                if (
+                    momentum_1h >= 0
+                    and momentum_strength_1h > 0.5
+                    and vol_regime_1h in ("normal", "high_vol")
+                    and vol_regime_4h != "chaotic"
+                ):
+                    htf_ok = True
+            else:
+                if (
+                    momentum_1h <= 0
+                    and momentum_strength_1h > 0.5
+                    and vol_regime_1h in ("normal", "high_vol")
+                    and vol_regime_4h != "chaotic"
+                ):
+                    htf_ok = True
+
+            div_bonus = 0.0
+            if direction == "Dump → Pump":
+                if momentum_div_1h == "bullish":
+                    div_bonus += 5.0
+                if momentum_div_4h == "bullish":
+                    div_bonus += 3.0
+                if momentum_div_1h == "bearish":
+                    div_bonus -= 4.0
+            else:
+                if momentum_div_1h == "bearish":
+                    div_bonus += 5.0
+                if momentum_div_4h == "bearish":
+                    div_bonus += 3.0
+                if momentum_div_1h == "bullish":
+                    div_bonus -= 4.0
+
+            structure_strength_bonus = (
+                (strength_1h - 3) * 2 + (strength_4h - 3) * 2
+            )
+
+            if ultra_ok and htf_ok:
+                ultra_direction_side = "bullish" if direction == "Dump → Pump" else "bearish"
+                micro_bonus = compute_micro_bonus(
+                    ultra_direction_side,
+                    micro,
+                )
+                footprint_bonus = compute_footprint_signal(
+                    footprint_zones,
+                    ultra_direction_side,
+                )
+
+                ultra_rating = int(
+                    (super_rating + hybrid_rating) / 2
+                    + 20
+                    + micro_bonus
+                    + footprint_bonus
+                    + liquidity_score
+                    + div_bonus
+                    + structure_strength_bonus
+                )
+
+                candidates.append({
+                    "symbol": symbol,
+                    "type": (
+                        "ULTRA HYBRID v6 "
+                        "Habr+Reversal+Pump+Flow+OI+HTF+Structure+Strength+Momentum+Div+Vol+Micro+Footprint+Liquidity+Memory "
+                        f"{direction} ({mode_key})"
+                    ),
+                    "emoji": "🔱",
+                    "price": last_price,
+                    "rating": ultra_rating,
+                    "oi": oi_status,
+                    "funding": funding_rate,
+                    "liq": liq_status,
+                    "flow": flow_status,
+                    "delta": delta_status,
+                    "trend_score": trend_score,
+                    "risk_score": risk_score,
+                    "trend_15m": trend_15m,
+                    "trend_1h": trend_1h,
+                    "trend_4h": trend_4h,
+                    "meta_closes": closes_1m,
+                    "meta_highs": highs_1m,
+                    "meta_lows": lows_1m,
+                    "liq_map_bias": liq_bias,
+                    "liq_map_strongest": liq_strongest,
+                    "liq_map_vac_up": liq_vac_up,
+                    "liq_map_vac_down": liq_vac_down,
+                    "htf_momentum_1h": momentum_1h,
+                    "htf_momentum_4h": momentum_4h,
+                    "htf_momentum_strength_1h": momentum_strength_1h,
+                    "htf_momentum_strength_4h": momentum_strength_4h,
+                    "htf_vol_regime_1h": vol_regime_1h,
+                    "htf_vol_regime_4h": vol_regime_4h,
+                    "htf_liq_1h": htf_liq_1h,
+                    "htf_liq_4h": htf_liq_4h,
+                    "htf_strength_1h": strength_1h,
+                    "htf_strength_4h": strength_4h,
+                    "htf_div_1h": momentum_div_1h,
+                    "htf_div_4h": momentum_div_4h,
+                })
+
+        if habr_adj >= min_score:
+            candidates.append({
+                "symbol": symbol,
+                "type": f"HABR {direction} ({mode_key})",
+                "emoji": "🧠",
+                "price": last_price,
+                "rating": habr_adj,
+                "oi": oi_status,
+                "funding": funding_rate,
+                "liq": liq_status,
+                "flow": flow_status,
+                "delta": delta_status,
+                "trend_score": trend_score,
+                "risk_score": risk_score,
+                "trend_15m": trend_15m,
+                "trend_1h": trend_1h,
+                "trend_4h": trend_4h,
+                "meta_closes": closes_1m,
+                "meta_highs": highs_1m,
+                "meta_lows": lows_1m,
+                "liq_map_bias": liq_bias,
+                "liq_map_strongest": liq_strongest,
+                "liq_map_vac_up": liq_vac_up,
+                "liq_map_vac_down": liq_vac_down,
+            })
+
+    if is_pump and pump_rating >= min_score:
+        adj = adjust_rating_with_context(
+            pump_rating,
+            f"PUMP ({mode_key})",
+            closes_1m,
+            oi_now,
+            oi_prev,
+            funding_rate,
+            liq_status,
+            flow_status,
+            delta_status,
+            trend_score,
+            risk_score,
+        )
+        adj += apply_reversal_filters("PUMP", closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
 
         candidates.append({
             "symbol": symbol,
-            "type": f"{signal_type} ({mode_key})",
-            "emoji": "✨",
+            "type": f"PUMP ({mode_key})",
+            "emoji": "🟢",
             "price": last_price,
-            "rating": ds_adj,
+            "rating": adj,
             "oi": oi_status,
             "funding": funding_rate,
             "liq": liq_status,
@@ -828,7 +1019,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "trend_15m": trend_15m,
             "trend_1h": trend_1h,
             "trend_4h": trend_4h,
-            "meta_opens": opens_1m,
             "meta_closes": closes_1m,
             "meta_highs": highs_1m,
             "meta_lows": lows_1m,
@@ -838,7 +1028,88 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "liq_map_vac_down": liq_vac_down,
         })
 
-    # === REVERSAL (ReversalDetector) как самостоятельный сигнал ===
+    if is_dump and dump_rating >= min_score:
+        adj = adjust_rating_with_context(
+            dump_rating,
+            f"DUMP ({mode_key})",
+            closes_1m,
+            oi_now,
+            oi_prev,
+            funding_rate,
+            liq_status,
+            flow_status,
+            delta_status,
+            trend_score,
+            risk_score,
+        )
+        adj += apply_reversal_filters("DUMP", closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
+
+        candidates.append({
+            "symbol": symbol,
+            "type": f"DUMP ({mode_key})",
+            "emoji": "🔴",
+            "price": last_price,
+            "rating": adj,
+            "oi": oi_status,
+            "funding": funding_rate,
+            "liq": liq_status,
+            "flow": flow_status,
+            "delta": delta_status,
+            "trend_score": trend_score,
+            "risk_score": risk_score,
+            "trend_15m": trend_15m,
+            "trend_1h": trend_1h,
+            "trend_4h": trend_4h,
+            "meta_closes": closes_1m,
+            "meta_highs": highs_1m,
+            "meta_lows": lows_1m,
+            "liq_map_bias": liq_bias,
+            "liq_map_strongest": liq_strongest,
+            "liq_map_vac_up": liq_vac_up,
+            "liq_map_vac_down": liq_vac_down,
+        })
+
+    if is_rev_pump and rev_pump_rating >= min_score:
+        adj = adjust_rating_with_context(
+            rev_pump_rating,
+            "REVERSAL Pump → Dump",
+            closes_1m,
+            oi_now,
+            oi_prev,
+            funding_rate,
+            liq_status,
+            flow_status,
+            delta_status,
+            trend_score,
+            risk_score,
+        )
+        adj += apply_reversal_filters("Pump → Dump", closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
+
+        candidates.append({
+            "symbol": symbol,
+            "type": "REVERSAL Pump → Dump",
+            "emoji": "🟡",
+            "price": last_price,
+            "rating": adj,
+            "oi": oi_status,
+            "funding": funding_rate,
+            "liq": liq_status,
+            "flow": flow_status,
+            "delta": delta_status,
+            "trend_score": trend_score,
+            "risk_score": risk_score,
+            "trend_15m": trend_15m,
+            "trend_1h": trend_1h,
+            "trend_4h": trend_4h,
+            "meta_closes": closes_1m,
+            "meta_highs": highs_1m,
+            "meta_lows": lows_1m,
+            "liq_map_bias": liq_bias,
+            "liq_map_strongest": liq_strongest,
+            "liq_map_vac_up": liq_vac_up,
+            "liq_map_vac_down": liq_vac_down,
+        })
+
     if rev.get("reversal") and rev.get("rating", 0) >= min_score:
         direction = "Dump → Pump" if rev["reversal"] == "bullish" else "Pump → Dump"
         adj = adjust_rating_with_context(
@@ -854,16 +1125,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             trend_score,
             risk_score,
         )
-        adj += apply_reversal_filters(
-            direction,
-            closes_1m,
-            highs_1m,
-            lows_1m,
-            volumes_1m,
-            delta_status,
-        )
-
-        dbg(symbol, f"REVERSAL OK: {direction} adj={adj}")
+        adj += apply_reversal_filters(direction, closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
 
         candidates.append({
             "symbol": symbol,
@@ -881,7 +1143,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "trend_15m": trend_15m,
             "trend_1h": trend_1h,
             "trend_4h": trend_4h,
-            "meta_opens": opens_1m,
             "meta_closes": closes_1m,
             "meta_highs": highs_1m,
             "meta_lows": lows_1m,
@@ -891,22 +1152,17 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "liq_map_vac_down": liq_vac_down,
         })
 
-    # === если нет кандидатов — выходим ===
     if not candidates:
-        dbg(symbol, "NO CANDIDATES")
         return None
 
-    # === SYMBOL MEMORY ===
     symbol_mem = get_symbol_memory(symbol)
     symbol_profile = symbol_mem.get("profile", {}) if symbol_mem else {}
-    symbol_regime_mem = symbol_profile.get("regime", "neutral")
+    symbol_regime = symbol_profile.get("regime", "neutral")
 
-    # === ФИНАЛЬНАЯ ОБРАБОТКА КАНДИДАТОВ ===
     for c in candidates:
         base = c["rating"]
         t = c["type"]
 
-        # направление
         if "Dump → Pump" in t or "PUMP" in t:
             direction_side = "bullish"
         elif "Pump → Dump" in t or "DUMP" in t:
@@ -914,10 +1170,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         else:
             direction_side = "bullish" if trend_score >= 0 else "bearish"
 
-        # импульс
         base += impulse_score
-
-        # BTC контекст
         base = base * btc_factor
 
         if btc_regime == "trending" and ("PUMP" in t or "DUMP" in t):
@@ -927,20 +1180,22 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         if btc_regime == "high_vol":
             base *= 0.9
 
-        # MEMORY BIAS
         mem_bias = 0.0
-        if symbol_regime_mem == "pumpy" and "PUMP" in t:
+        if symbol_regime == "pumpy" and "PUMP" in t:
             mem_bias += 10.0
-        if symbol_regime_mem == "dumpy" and "DUMP" in t:
+        if symbol_regime == "dumpy" and "DUMP" in t:
             mem_bias += 10.0
-        if symbol_regime_mem == "mean_reverting" and "REVERSAL" in t:
+        if symbol_regime == "trending" and "ULTRA HYBRID" in t:
             mem_bias += 8.0
-        if symbol_regime_mem == "chaotic":
+        if symbol_regime == "mean_reverting" and "REVERSAL" in t:
+            mem_bias += 8.0
+        if symbol_regime == "chaotic":
             mem_bias -= 12.0
+        if symbol_regime == "stable" and "ULTRA HYBRID" in t:
+            mem_bias += 5.0
 
         base += mem_bias
 
-        # EXTRA FILTERS
         extra_filters_ok = {
             "min_score_ok": base >= min_score,
             "oi_not_falling": oi_status != "falling",
@@ -952,7 +1207,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             ),
         }
 
-        # === SMART FILTERS v3 ===
         sf3 = apply_smartfilters_v3(
             symbol=symbol,
             base_rating=int(base),
@@ -970,43 +1224,18 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             global_risk_proxy=None,
         )
 
-        # раскладываем контексты
-        symbol_regime_ctx = sf3.get("symbol_regime") or {}
-        market_ctx = sf3.get("market_ctx") or {}
-        vol_cluster_ctx = sf3.get("vol_cluster") or {}
-
         c["rating"] = sf3["final_rating"]
         c["confidence"] = sf3["confidence"]
-        c["symbol_regime_ctx"] = symbol_regime_ctx
-        c["market_ctx"] = market_ctx
-        c["vol_cluster_ctx"] = vol_cluster_ctx
+        c["symbol_regime"] = sf3["symbol_regime"]
+        c["market_ctx"] = sf3["market_ctx"]
+        c["vol_cluster"] = sf3["vol_cluster"]
         c["memory_ctx"] = sf3["memory_ctx"]
         c["sf3_weights"] = sf3["weights"]
         c["symbol_memory_profile"] = symbol_profile
 
-        # плоские поля для движка
-        c["symbol_regime"] = symbol_regime_ctx.get("regime")
-        c["symbol_regime_strength"] = symbol_regime_ctx.get("strength", 1.0)
-        c["market_risk"] = market_ctx.get("risk", 0.0)
-        c["vol_cluster"] = (
-            vol_cluster_ctx.get("cluster")
-            if isinstance(vol_cluster_ctx, dict)
-            else vol_cluster_ctx
-        )
-        c["btc_regime"] = btc_regime
-
-        # === FUSION ENGINE ===
-        fusion = compute_fusion_score(sf3, rev, trend_score, risk_score)
-        c["fusion_score"] = fusion["fusion_score"]
-        c["fusion_band"] = fusion["band"]
-
-        dbg(symbol, f"FINAL CANDIDATE: {c['type']} rating={c['rating']} fusion={c['fusion_score']:.2f}")
-
-    # === СОРТИРОВКА ===
     candidates.sort(key=lambda x: x["rating"], reverse=True)
     best = candidates[0]
 
-    # === MEMORY UPDATE ===
     atr_1m = compute_atr_from_klines(klines_1m)
     snapshot = {
         "atr_1m": atr_1m,
@@ -1018,16 +1247,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     updated_mem = update_symbol_memory(symbol, snapshot)
     best["symbol_memory"] = updated_mem
 
-    dbg(symbol, f"BEST SIGNAL: {best['type']} rating={best['rating']}")
-
     log_signal(best)
     mark_symbol_signal(symbol)
     return best
 
-
-# ============================
-#   SCANNER LOOP
-# ============================
 
 async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
     async with aiohttp.ClientSession() as session:
@@ -1053,13 +1276,10 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     signals.sort(key=lambda x: x["rating"], reverse=True)
 
                     for s in signals[:10]:
-                        symbol_regime_ctx = s.get("symbol_regime_ctx", {}) or {}
+                        symbol_regime = s.get("symbol_regime", {}) or {}
                         market_ctx = s.get("market_ctx", {}) or {}
-                        vol_cluster_ctx = s.get("vol_cluster_ctx", {}) or {}
+                        vol_cluster = s.get("vol_cluster", {}) or {}
                         mem_profile = (s.get("symbol_memory") or {}).get("profile", {}) or {}
-
-                        pump_prob = mem_profile.get("pump_probability") or 0.0
-                        dump_prob = mem_profile.get("dump_probability") or 0.0
 
                         text = (
                             f"{s['emoji']} {s['type']} — {s['symbol']}\n"
@@ -1069,10 +1289,10 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                             f"Trend Score: {s['trend_score']}\n"
                             f"Risk Score: {s['risk_score']}\n"
                             f"HTF 15m: {s.get('trend_15m', 0)} | 1h: {s.get('trend_1h', 0)} | 4h: {s.get('trend_4h', 0)}\n"
-                            f"Symbol Regime: {symbol_regime_ctx.get('regime')} (strength={symbol_regime_ctx.get('strength')})\n"
+                            f"Symbol Regime: {symbol_regime.get('regime')} (strength={symbol_regime.get('strength')})\n"
                             f"Market Regime: {market_ctx.get('market_regime')} | Risk: {market_ctx.get('risk')}\n"
-                            f"Vol Cluster: {vol_cluster_ctx.get('cluster')} | VolScore: {vol_cluster_ctx.get('volatility_score')}\n"
-                            f"Symbol Memory Regime: {mem_profile.get('regime')} | PumpProb: {pump_prob:.2f} | DumpProb: {dump_prob:.2f}\n"
+                            f"Vol Cluster: {vol_cluster.get('cluster')} | VolScore: {vol_cluster.get('volatility_score')}\n"
+                            f"Symbol Memory Regime: {mem_profile.get('regime')} | PumpProb: {mem_profile.get('pump_probability'):.2f} | DumpProb: {mem_profile.get('dump_probability'):.2f}\n"
                             f"OI: {s['oi']}\n"
                             f"{format_funding_text(s['funding'])}\n"
                             f"{format_liq_text(s['liq'])}\n"
@@ -1081,7 +1301,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                             f"Liquidity Bias: {s.get('liq_map_bias')}\n"
                             f"Strongest Zone: {s.get('liq_map_strongest')}\n"
                             f"Vacuum Up: {s.get('liq_map_vac_up')} | Down: {s.get('liq_map_vac_down')}\n"
-                            f"Fusion Score: {s.get('fusion_score', 0):.2f} | Band: {s.get('fusion_band')}\n"
                         )
 
                         await send_text(text)

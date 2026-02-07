@@ -1,153 +1,219 @@
 # detectors.py
+from typing import List, Optional, Tuple
 
-class SimpleReversalDetector:
-    """
-    Простой и надёжный реверсал:
-    - Dump → Pump: падали → сильная зелёная свеча + объём
-    - Pump → Dump: росли → сильная красная свеча + объём
-    """
+from context import (
+    compute_change_percent,
+    count_trend_bars,
+    clamp,
+    funding_bias,
+)
+from reversal_detector import ReversalDetector
 
-    def analyze(self, closes, highs, lows, volumes):
-        if len(closes) < 4:
-            return {"reversal": None, "rating": 0}
-
-        c0, c1, c2, c3 = closes[0], closes[1], closes[2], closes[3]
-        v0, v1, v2 = volumes[0], volumes[1], volumes[2]
-
-        rating = 0
-        direction = None
-
-        # === Dump → Pump ===
-        dump_before = c3 > c2 > c1
-        strong_green = c0 > c1 and (c0 - c1) / max(c1, 1e-7) * 100 >= 1.0
-        vol_spike = v0 > (v1 + v2) / 2 * 1.5
-
-        if dump_before and strong_green and vol_spike:
-            direction = "bullish"
-            rating = 60
-
-        # === Pump → Dump ===
-        pump_before = c3 < c2 < c1
-        strong_red = c0 < c1 and (c1 - c0) / max(c1, 1e-7) * 100 >= 1.0
-        vol_spike_red = v0 > (v1 + v2) / 2 * 1.5
-
-        if pump_before and strong_red and vol_spike_red:
-            if rating < 60:
-                direction = "bearish"
-                rating = 60
-
-        return {
-            "reversal": direction,
-            "rating": rating,
-        }
-
-    def analyze_habr(self, closes, highs, lows, volumes):
-        """
-        Упрощённый HABR — просто усиливает реверсал.
-        """
-        base = self.analyze(closes, highs, lows, volumes)
-        if base["reversal"] is None:
-            return None
-
-        return {
-            "direction": base["reversal"],
-            "rating": base["rating"] + 10,
-        }
+detector = ReversalDetector()
 
 
-detector = SimpleReversalDetector()
+# ============================
+#   HELPERS
+# ============================
+
+def compute_volume_spike(volumes: List[float], lookback: int = 15) -> float:
+    if len(volumes) <= lookback:
+        return 1.0
+    current = volumes[0]
+    prev = volumes[1:lookback + 1]
+    avg_prev = sum(prev) / len(prev) if sum(prev) > 0 else 1.0
+    return current / avg_prev
 
 
-def detect_signal(closes, highs, lows, volumes, mode_cfg):
-    """
-    Простой детектор ПАМП/ДАМП:
-    - смотрит на последнюю свечу
-    - проверяет % движения и объём
-    """
+def small_candle_filter(
+    closes: List[float],
+    highs: List[float],
+    lows: List[float],
+    min_body_ratio: float = 0.20
+) -> bool:
+    if len(closes) < 2:
+        return False
+    body = abs(closes[0] - closes[1])
+    rng = highs[0] - lows[0] if highs[0] != lows[0] else 1e-7
+    return (body / rng) >= min_body_ratio
 
+
+# ============================
+#   DETECTORS
+# ============================
+
+def detect_big_pump(
+    closes: List[float],
+    highs: List[float],
+    lows: List[float],
+    volumes: List[float],
+    mode_cfg: dict
+) -> Tuple[bool, int]:
+    if len(closes) < 20:
+        return False, 0
+
+    change_5m = compute_change_percent(closes, 0, 5)
+    change_24h = compute_change_percent(closes, 0, 20)
+    vol_spike = compute_volume_spike(volumes, lookback=15)
+    up_bars, _ = count_trend_bars(closes, lookback=8)
+
+    if not small_candle_filter(closes, highs, lows, min_body_ratio=0.20):
+        return False, 0
+
+    is_pump = (
+        change_5m >= mode_cfg["pump_5m"] and
+        change_24h >= mode_cfg["change_24h"] and
+        vol_spike >= mode_cfg["volume_spike"] and
+        up_bars >= mode_cfg["up_bars"]
+    )
+
+    raw_rating = change_5m * 4 + change_24h * 1.5 + vol_spike * 5 + up_bars * 2
+    rating = clamp(raw_rating)
+
+    return is_pump, rating
+
+
+def detect_big_dump(
+    closes: List[float],
+    highs: List[float],
+    lows: List[float],
+    volumes: List[float],
+    mode_cfg: dict
+) -> Tuple[bool, int]:
+    if len(closes) < 20:
+        return False, 0
+
+    change_5m = compute_change_percent(closes, 0, 5)
+    change_24h = compute_change_percent(closes, 0, 20)
+    vol_spike = compute_volume_spike(volumes, lookback=15)
+    _, down_bars = count_trend_bars(closes, lookback=8)
+
+    if not small_candle_filter(closes, highs, lows, min_body_ratio=0.20):
+        return False, 0
+
+    is_dump = (
+        change_5m <= -mode_cfg["pump_5m"] and
+        change_24h <= -mode_cfg["change_24h"] and
+        vol_spike >= mode_cfg["volume_spike"] and
+        down_bars >= mode_cfg["up_bars"]
+    )
+
+    raw_rating = abs(change_5m) * 4 + abs(change_24h) * 1.5 + vol_spike * 5 + down_bars * 2
+    rating = clamp(raw_rating)
+
+    return is_dump, rating
+
+
+def detect_pump_reversal(
+    closes: List[float],
+    highs: List[float],
+    lows: List[float],
+    volumes: List[float]
+) -> Tuple[bool, int]:
     if len(closes) < 10:
-        return None
-
-    pump_min_move_pct = mode_cfg.get("pump_min_move_pct", 1.5)
-    pump_min_volume_mult = mode_cfg.get("pump_min_volume_mult", 2.0)
+        return False, 0
 
     c0, c1 = closes[0], closes[1]
-    v0 = volumes[0]
-    v_hist = volumes[1:10]
-    v_avg = sum(v_hist) / max(len(v_hist), 1)
+    h0, l0 = highs[0], lows[0]
+    v0, v1 = volumes[0], volumes[1]
 
-    move_pct = (c0 - c1) / max(c1, 1e-7) * 100
-    vol_mult = v0 / max(v_avg, 1e-7)
+    body = abs(c0 - c1)
+    upper_wick = h0 - max(c0, c1)
 
-    signal_type = None
-    direction_side = None
-    rating = 0
+    long_upper = upper_wick > body * 1.5
+    red_candle = c0 < c1
+    # ослабляем фильтр объёма: допускаем и всплеск, и лёгкое падение
+    volume_condition = v0 <= v1 * 1.2
+    support_break = c0 < lows[2]
 
-    # === PUMP ===
-    if move_pct >= pump_min_move_pct and vol_mult >= pump_min_volume_mult:
-        signal_type = "PUMP"
-        direction_side = "bullish"
-        rating = 55 + min(20, move_pct) + min(10, (vol_mult - pump_min_volume_mult) * 2)
+    is_reversal = long_upper and red_candle and volume_condition and support_break
 
-    # === DUMP ===
-    if move_pct <= -pump_min_move_pct and vol_mult >= pump_min_volume_mult:
-        signal_type = "DUMP"
-        direction_side = "bearish"
-        rating = 55 + min(20, abs(move_pct)) + min(10, (vol_mult - pump_min_volume_mult) * 2)
+    raw_rating = upper_wick * 6 + abs(c0 - c1) * 3
+    rating = clamp(raw_rating)
 
-    if signal_type is None:
-        return None
+    return is_reversal, rating
 
-    return {
-        "type": signal_type,
-        "direction_side": direction_side,
-        "rating": int(min(rating, 100)),
-    }
 
+# ============================
+#   CONTEXT RATING ADJUSTMENT
+# ============================
 
 def adjust_rating_with_context(
-    rating,
-    signal_type,
-    closes,
-    oi_now,
-    oi_prev,
-    funding_rate,
-    liq_status,
-    flow_status,
-    delta_status,
-    trend_score,
-    risk_score,
-):
-    """
-    Мягкая корректировка рейтинга.
-    Ничего не душит, только слегка подстраивает.
-    """
+    base_rating: int,
+    signal_type: str,
+    closes_1m: List[float],
+    oi_now: Optional[float],
+    oi_prev: Optional[float],
+    funding_rate: Optional[float],
+    liq_status: str,
+    flow_status: str,
+    delta_status: str,
+    trend_score: int,
+    risk_score: int
+) -> int:
+    rating = base_rating
 
-    r = float(rating)
+    price_change_15m = compute_change_percent(closes_1m, 0, 15) if len(closes_1m) > 15 else 0.0
 
-    # тренд
-    if "PUMP" in signal_type and trend_score > 0:
-        r += 5
-    if "DUMP" in signal_type and trend_score < 0:
-        r += 5
-
-    # OI
-    if oi_now and oi_prev:
+    oi_bias = None
+    if oi_now is not None and oi_prev is not None and oi_prev != 0:
         if oi_now > oi_prev * 1.03:
-            r += 3
+            oi_bias = "rising"
         elif oi_now < oi_prev * 0.97:
-            r -= 3
+            oi_bias = "falling"
+        else:
+            oi_bias = "flat"
 
-    # дельта
-    if delta_status == "bullish" and "PUMP" in signal_type:
-        r += 3
-    if delta_status == "bearish" and "DUMP" in signal_type:
-        r += 3
+    f_bias = funding_bias(funding_rate)
 
-    # риск
+    is_bullish_signal = any(x in signal_type for x in ["Dump → Pump", "PUMP"])
+    is_bearish_signal = any(x in signal_type for x in ["Pump → Dump", "DUMP"])
+
+    if is_bullish_signal:
+        if price_change_15m < -1.0 and oi_bias == "rising":
+            rating += 10
+        if f_bias == "bullish":
+            rating += 5
+        if liq_status == "short_spike":
+            rating += 8
+        if flow_status == "aggressive_buyers":
+            rating += 5
+        if delta_status == "bullish":
+            rating += 5
+        elif delta_status == "bearish":
+            rating -= 5
+        if oi_bias == "falling" and f_bias == "bearish":
+            rating -= 5
+
+        if trend_score > 70:
+            rating += 5
+        elif trend_score < 30:
+            rating -= 5
+
+    if is_bearish_signal:
+        if price_change_15m > 1.0 and oi_bias == "rising":
+            rating += 10
+        if f_bias == "bearish":
+            rating += 5
+        if liq_status == "long_spike":
+            rating += 8
+        if flow_status == "aggressive_sellers":
+            rating += 5
+        if delta_status == "bearish":
+            rating += 5
+        elif delta_status == "bullish":
+            rating -= 5
+        if oi_bias == "falling" and f_bias == "bullish":
+            rating -= 5
+
+        if trend_score < 30:
+            rating += 5
+        elif trend_score > 70:
+            rating -= 5
+
     if risk_score > 80:
-        r -= 5
+        rating -= 10
     elif risk_score < 30:
-        r += 3
+        rating += 5
 
-    return int(max(0, min(r, 100)))
+    return clamp(rating)

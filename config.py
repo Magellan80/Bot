@@ -1,71 +1,84 @@
 import json
 import os
+from dotenv import load_dotenv
 
+# Загружаем .env
+load_dotenv()
+
+# ====== ТЕЛЕГРАМ ======
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+if not BOT_TOKEN:
+    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set in .env")
+
+ADMIN_ID = int(os.getenv("TELEGRAM_CHAT_ID", "0"))
+if ADMIN_ID == 0:
+    raise RuntimeError("TELEGRAM_CHAT_ID is not set in .env")
+
+# ====== BYBIT API ======
+BYBIT_API_KEY = os.getenv("BYBIT_API_KEY")
+BYBIT_API_SECRET = os.getenv("BYBIT_API_SECRET")
+
+# В режиме скринера Bybit ключи могут быть пустыми — это нормально
+# Поэтому НЕ выбрасываем ошибку
+if not BYBIT_API_KEY or not BYBIT_API_SECRET:
+    print("⚠ WARNING: BYBIT_API_KEY / BYBIT_API_SECRET not set — trading disabled")
+
+# ====== ФАЙЛ НАСТРОЕК ======
 SETTINGS_FILE = "settings.json"
 
-# ============================================================
-#   TELEGRAM BOT TOKEN (вставлен ровно как прислано)
-# ============================================================
-
-BOT_TOKEN = "8015271649:AAGaq86xSKBD1e8Av7lYCYfrNsXI_4bDsaQ"
-
-# ID администратора — поставь свой Telegram user_id
-ADMIN_ID = 1312559799
-
-# Ключи Bybit (если нужны)
-BYBIT_API_KEY = ""
-BYBIT_API_SECRET = ""
-
-# ============================================================
-#   РЕЖИМЫ A/B/C
-# ============================================================
-
+# ====== РЕЖИМЫ A / B / C ======
 MODES = {
-    "A": {"name": "Aggressive"},
-    "B": {"name": "Balanced"},
-    "C": {"name": "Conservative"},
+    "A": {
+        "name": "Вариант A — умеренно строгий",
+        "pump_5m": 7.0,
+        "volume_spike": 4.0,
+        "up_bars": 5,
+        "change_24h": 10.0,
+        "volume_usdt": 5_000_000
+    },
+    "B": {
+        "name": "Вариант B — очень строгий",
+        "pump_5m": 10.0,
+        "volume_spike": 5.0,
+        "up_bars": 6,
+        "change_24h": 15.0,
+        "volume_usdt": 10_000_000
+    },
+    "C": {
+        "name": "Вариант C — супер-строгий",
+        "pump_5m": 15.0,
+        "volume_spike": 6.0,
+        "up_bars": 7,
+        "change_24h": 20.0,
+        "volume_usdt": 20_000_000
+    }
 }
 
-# ============================================================
-#   ПАРАМЕТРЫ ПО УМОЛЧАНИЮ
-# ============================================================
+# ====== ЧУВСТВИТЕЛЬНОСТЬ ПО УМОЛЧАНИЮ ======
+DEFAULT_MIN_SCORE = 40
 
-DEFAULT_MIN_SCORE = 45
 
-# ============================================================
-#   SETTINGS.JSON
-# ============================================================
-
-def load_settings() -> dict:
+def load_settings():
     if not os.path.exists(SETTINGS_FILE):
-        return {}
-    try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+        return {
+            "mode": "A",
+            "min_score": DEFAULT_MIN_SCORE
+        }
+    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-def save_settings(data: dict):
-    try:
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"[config] Ошибка сохранения settings.json: {e}")
 
-# ============================================================
-#   РЕЖИМ A/B/C
-# ============================================================
+def save_settings(settings: dict):
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(settings, f, indent=4, ensure_ascii=False)
+
 
 def get_current_mode():
     settings = load_settings()
-    mode = settings.get("mode", "B")
-    if mode not in ("A", "B", "C"):
-        mode = "B"
-    return mode, {"mode": mode}
+    mode_key = settings.get("mode", "A")
+    return mode_key, MODES[mode_key]
 
-def set_mode(mode: str):
-    if mode not in ("A", "B", "C"):
-        raise ValueError("Режим должен быть A, B или C")
+
+def get_current_min_score():
     settings = load_settings()
-    settings["mode"] = mode
-    save_settings(settings)
+    return int(settings.get("min_score", DEFAULT_MIN_SCORE))
