@@ -245,6 +245,31 @@ def compute_atr_from_klines(klines, period: int = 14) -> float:
     return atr
 
 
+def get_adaptive_min_score(base_min_score: int, btc_ctx: dict, settings: dict) -> int:
+    if not settings.get("adaptive_min_score_enabled", True):
+        return int(base_min_score)
+
+    min_score = int(base_min_score)
+    regime = btc_ctx.get("regime", "neutral")
+    volatility = float(btc_ctx.get("volatility", 0.0))
+
+    if regime == "trending":
+        min_score += int(settings.get("adaptive_min_score_trending_bonus", 3))
+    elif regime == "high_vol":
+        min_score += int(settings.get("adaptive_min_score_high_vol_bonus", 10))
+    elif regime == "ranging":
+        min_score += int(settings.get("adaptive_min_score_ranging_bonus", -5))
+
+    if volatility >= 1.5:
+        min_score += 3
+    elif volatility <= 0.6:
+        min_score -= 2
+
+    min_floor = int(settings.get("adaptive_min_score_min", 20))
+    min_ceiling = int(settings.get("adaptive_min_score_max", 80))
+    return max(min_floor, min(min_score, min_ceiling))
+
+
 def build_htf_liquidity_light(
     closes,
     highs,
@@ -430,8 +455,6 @@ async def compute_htf_context(session, symbol: str):
         log_error(e)
 
     return htf
-
-
 def evaluate_orderbook_quality(
     orderbook: dict,
     last_price: float,
@@ -636,7 +659,13 @@ async def compute_btc_stability(session):
     try:
         kl = await fetch_klines(session, "BTCUSDT", interval="1", limit=60)
         if not kl or len(kl) < 20:
-            _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
+            _BTC_CTX_CACHE = {
+                "ts": now,
+                "factor": 1.0,
+                "regime": "neutral",
+                "volatility": 0.0,
+                "change_pct": 0.0,
+            }
             return _BTC_CTX_CACHE
 
         closes = [float(c[4]) for c in kl][::-1]
@@ -662,15 +691,33 @@ async def compute_btc_stability(session):
             factor = 1.1
             regime = "ranging"
 
-        _BTC_CTX_CACHE = {"ts": now, "factor": factor, "regime": regime}
+        _BTC_CTX_CACHE = {
+            "ts": now,
+            "factor": factor,
+            "regime": regime,
+            "volatility": volat,
+            "change_pct": change_pct,
+        }
         return _BTC_CTX_CACHE
     except Exception as e:
         log_error(e)
-        _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
+        _BTC_CTX_CACHE = {
+            "ts": now,
+            "factor": 1.0,
+            "regime": "neutral",
+            "volatility": 0.0,
+            "change_pct": 0.0,
+        }
         return _BTC_CTX_CACHE
 
 
-async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
+async def analyze_symbol_async(
+    session,
+    symbol: str,
+    min_score: int,
+    ticker_info: dict,
+    btc_ctx: dict | None = None,
+):
     settings = load_settings()
     strictness_level = str(settings.get("strictness_level", "strict")).lower()
     if strictness_level not in ("soft", "medium", "strict"):
@@ -794,7 +841,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
 
-    btc_ctx = await compute_btc_stability(session)
+    btc_ctx = btc_ctx or await compute_btc_stability(session)
     btc_factor = btc_ctx["factor"]
     btc_regime = btc_ctx["regime"]
     reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
@@ -1125,7 +1172,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
                 "liq_map_vac_up": liq_vac_up,
                 "liq_map_vac_down": liq_vac_down,
             })
-
     if rev.get("reversal") and rev.get("rating", 0) >= min_score:
         direction = "Dump → Pump" if rev["reversal"] == "bullish" else "Pump → Dump"
         adj = adjust_rating_with_context(
@@ -1298,6 +1344,8 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                 settings = load_settings()
                 max_concurrency = int(settings.get("max_concurrency", 20))
                 semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency > 0 else None
+                btc_ctx = await compute_btc_stability(session)
+                effective_min_score = get_adaptive_min_score(min_score, btc_ctx, settings)
                 tickers = await fetch_tickers(session)
 
                 symbols = [
@@ -1308,9 +1356,21 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
 
                 async def _run_symbol(symbol: str, info: dict):
                     if semaphore is None:
-                        return await analyze_symbol_async(session, symbol, min_score, info)
+                        return await analyze_symbol_async(
+                            session,
+                            symbol,
+                            effective_min_score,
+                            info,
+                            btc_ctx=btc_ctx,
+                        )
                     async with semaphore:
-                        return await analyze_symbol_async(session, symbol, min_score, info)
+                        return await analyze_symbol_async(
+                            session,
+                            symbol,
+                            effective_min_score,
+                            info,
+                            btc_ctx=btc_ctx,
+                        )
 
                 tasks = [
                     _run_symbol(s, tinfo)
@@ -1334,6 +1394,7 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                             f"Цена: {s['price']:.4f} USDT\n"
                             f"Сила сигнала: {s['rating']}/100\n"
                             f"Уверенность: {s.get('confidence', 0):.2f}\n"
+                            f"Min Score: {effective_min_score} (base {min_score})\n"
                             f"Trend Score: {s['trend_score']}\n"
                             f"Risk Score: {s['risk_score']}\n"
                             f"HTF 15m: {s.get('trend_15m', 0)} | 1h: {s.get('trend_1h', 0)} | 4h: {s.get('trend_4h', 0)}\n"
