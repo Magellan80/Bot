@@ -239,8 +239,8 @@ async def compute_trend_score(session, symbol: str) -> int:
     if not klines_15m or not klines_1h:
         return 50
 
-    closes_15m = [float(c[4]) for c in klines_15m]
-    closes_1h = [float(c[4]) for c in klines_1h]
+    closes_15m = [float(c[4]) for c in klines_15m][::-1]
+    closes_1h = [float(c[4]) for c in klines_1h][::-1]
 
     ts15 = trend_score_from_closes(closes_15m)
     ts1h = trend_score_from_closes(closes_1h)

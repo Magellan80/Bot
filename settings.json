@@ -1,5 +1,10 @@
 {
     "min_score": 40,
     "mode": "A",
-    "bot_mode": "SCREENER"
+    "bot_mode": "SCREENER",
+    "strictness_level": "strict",
+    "max_concurrency": 20,
+    "orderbook_max_spread_pct": 0.5,
+    "orderbook_min_total_vol": 500.0,
+    "orderbook_depth_n": 10
 }

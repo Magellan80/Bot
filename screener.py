@@ -1,13 +1,14 @@
 import time
 import asyncio
 import aiohttp
+from typing import Any, Dict
 from io import BytesIO
 import traceback
 import pandas as pd
 import mplfinance as mpf
 from aiogram.types import BufferedInputFile
 
-from config import get_current_mode
+from config import get_current_mode, load_settings
 from data_layer import (
     fetch_tickers,
     fetch_klines,
@@ -41,16 +42,18 @@ from detectors import (
 from microstructure import (
     build_price_buckets,
     analyze_microstructure,
-    compute_micro_bonus,
 )
 from htf_structure import compute_htf_structure, detect_swings
-from footprint import (
-    compute_footprint_zones,
-    compute_footprint_signal,
-)
+from footprint import compute_footprint_zones
 
 from smart_filters_v3 import apply_smartfilters_v3
-from symbol_memory import update_symbol_memory, get_symbol_memory
+from symbol_memory import (
+    update_symbol_memory,
+    get_symbol_memory,
+    get_symbol_state,
+    set_symbol_state,
+    clear_symbol_state,
+)
 
 SYMBOL_COOLDOWN = 300
 _last_signal_ts = {}
@@ -429,7 +432,13 @@ async def compute_htf_context(session, symbol: str):
     return htf
 
 
-def evaluate_orderbook_quality(orderbook: dict, last_price: float):
+def evaluate_orderbook_quality(
+    orderbook: dict,
+    last_price: float,
+    max_spread_pct: float = 0.5,
+    min_total_vol: float = 500.0,
+    depth_n: int = 10,
+):
     try:
         bids = orderbook.get("b", []) or orderbook.get("bids", [])
         asks = orderbook.get("a", []) or orderbook.get("asks", [])
@@ -447,14 +456,10 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
         mid = (best_ask + best_bid) / 2
         spread_pct = (best_ask - best_bid) / mid * 100
 
-        depth_n = 10
         bid_vol = sum(float(x[1]) for x in bids_sorted[:depth_n])
         ask_vol = sum(float(x[1]) for x in asks_sorted[:depth_n])
 
         total_vol = bid_vol + ask_vol
-
-        max_spread_pct = 0.5
-        min_total_vol = 500.0
 
         ok = True
         if spread_pct > max_spread_pct:
@@ -470,7 +475,7 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
         }
     except Exception as e:
         log_error(e)
-        return False, {}
+        return {}
 
 
 def compute_impulse_score(closes, volumes):
@@ -508,6 +513,117 @@ def compute_impulse_score(closes, volumes):
     except Exception as e:
         log_error(e)
         return 0.0
+
+
+def infer_direction_side(signal_type: str) -> str | None:
+    if any(x in signal_type for x in ["Pump → Dump", "DUMP"]):
+        return "bearish"
+    if any(x in signal_type for x in ["Dump → Pump", "PUMP"]):
+        return "bullish"
+    return None
+
+
+def apply_alignment_penalties(
+    rating: float,
+    direction_side: str | None,
+    trend_1h: float,
+    trend_4h: float,
+    flow_status: str,
+    impulse_score: float,
+) -> float:
+    adjusted = rating
+    if direction_side == "bearish":
+        if trend_1h > 2 or trend_4h > 2:
+            adjusted *= 0.9
+        if flow_status == "aggressive_buyers":
+            adjusted *= 0.9
+        if impulse_score > 2:
+            adjusted *= 0.9
+    elif direction_side == "bullish":
+        if trend_1h < -2 or trend_4h < -2:
+            adjusted *= 0.9
+        if flow_status == "aggressive_sellers":
+            adjusted *= 0.9
+        if impulse_score < -2:
+            adjusted *= 0.9
+    return adjusted
+
+
+def _get_reversal_state(symbol: str, now_ts: float, ttl_sec: int) -> Dict[str, Any]:
+    state = get_symbol_state(symbol)
+    if not state:
+        return {}
+    ts = state.get("ts")
+    if not isinstance(ts, (int, float)):
+        return {}
+    if now_ts - ts > ttl_sec:
+        clear_symbol_state(symbol)
+        return {}
+    return state
+
+
+def _should_allow_reversal(
+    direction: str,
+    state: Dict[str, Any],
+    requires_state: bool,
+    min_score: int,
+    rating: float,
+    extra_min_bonus: int,
+    min_delay_bars: int,
+) -> bool:
+    if not requires_state:
+        return rating >= min_score
+    if not state:
+        return rating >= (min_score + extra_min_bonus)
+    state_type = state.get("type")
+    state_delay = int(state.get("delay_bars", 0))
+    if state_delay < min_delay_bars:
+        return False
+    if direction == "Dump → Pump":
+        return state_type == "dump"
+    if direction == "Pump → Dump":
+        return state_type == "pump"
+    return False
+
+
+def _passes_strict_reversal_filters(
+    strictness_level: str,
+    direction: str,
+    flow_status: str,
+    delta_status: str,
+    event_1h: str | None,
+    event_4h: str | None,
+    structure_1h: str,
+    structure_4h: str,
+) -> bool:
+    if strictness_level == "soft":
+        return True
+
+    require_structure = strictness_level == "strict"
+    require_event = strictness_level == "strict"
+
+    structure_ok = False
+    event_ok = False
+
+    if direction == "Dump → Pump":
+        if flow_status == "aggressive_sellers" or delta_status == "bearish":
+            return False
+        structure_ok = structure_1h == "bullish" or structure_4h == "bullish"
+        event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
+    else:
+        if flow_status == "aggressive_buyers" or delta_status == "bullish":
+            return False
+        structure_ok = structure_1h == "bearish" or structure_4h == "bearish"
+        event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
+
+    if strictness_level == "medium":
+        return structure_ok or event_ok
+
+    if require_structure and not structure_ok:
+        return False
+    if require_event and not event_ok:
+        return False
+    return True
 
 
 async def compute_btc_stability(session):
@@ -555,7 +671,19 @@ async def compute_btc_stability(session):
 
 
 async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
+    settings = load_settings()
+    strictness_level = str(settings.get("strictness_level", "strict")).lower()
+    if strictness_level not in ("soft", "medium", "strict"):
+        strictness_level = "strict"
+    ob_max_spread_pct = float(settings.get("orderbook_max_spread_pct", 0.5))
+    ob_min_total_vol = float(settings.get("orderbook_min_total_vol", 500.0))
+    ob_depth_n = int(settings.get("orderbook_depth_n", 10))
+    reversal_requires_state = bool(settings.get("reversal_requires_state", True))
+    reversal_state_ttl_sec = int(settings.get("reversal_state_ttl_sec", 7200))
+    reversal_min_score_bonus = int(settings.get("reversal_min_score_bonus", 10))
+    reversal_min_delay_bars = int(settings.get("reversal_min_delay_bars", 3))
     mode_key, mode_cfg = get_current_mode()
+    now_ts = time.time()
 
     if symbol_on_cooldown(symbol):
         return None
@@ -573,7 +701,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     lows_1m = [float(c[3]) for c in klines_1m]
     volumes_1m = [float(c[5]) for c in klines_1m]
 
-    last_price = closes_1m[0]
+    latest_close = closes_1m[1] if len(closes_1m) > 1 else closes_1m[0]
+    last_price = latest_close
 
     orderbook = await fetch_orderbook(session, symbol, limit=50)
     liquidity = build_liquidity_map(orderbook, last_price)
@@ -583,7 +712,13 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     liq_vac_up = liquidity.get("vacuum_up", 0)
     liq_vac_down = liquidity.get("vacuum_down", 0)
 
-    ob_ok, ob_meta = evaluate_orderbook_quality(orderbook, last_price)
+    ob_ok, ob_meta = evaluate_orderbook_quality(
+        orderbook,
+        last_price,
+        max_spread_pct=ob_max_spread_pct,
+        min_total_vol=ob_min_total_vol,
+        depth_n=ob_depth_n,
+    )
     if not ob_ok:
         return None
 
@@ -662,6 +797,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     btc_ctx = await compute_btc_stability(session)
     btc_factor = btc_ctx["factor"]
     btc_regime = btc_ctx["regime"]
+    reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
 
     candidates = []
 
@@ -801,166 +937,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
                     "liq_map_vac_down": liq_vac_down,
                 })
 
-            # === ULTRA HYBRID v6 ===
-            liquidity_score = 0.0
-
-            if liq_bias == "bullish":
-                liquidity_score += 1.5
-            elif liq_bias == "bearish":
-                liquidity_score -= 1.5
-
-            if liq_strongest:
-                side, (lz_price, lz_size) = liq_strongest
-                if side == "up":
-                    liquidity_score -= 1.0
-                elif side == "down":
-                    liquidity_score += 1.0
-
-            if liq_vac_up >= 5:
-                liquidity_score += 0.5
-            if liq_vac_down >= 5:
-                liquidity_score -= 0.5
-
-            htf_liq_bias_1h = htf_liq_1h.get("liquidity_bias", "balanced")
-            htf_liq_bias_4h = htf_liq_4h.get("liquidity_bias", "balanced")
-
-            if direction == "Dump → Pump":
-                if htf_liq_bias_1h == "below":
-                    liquidity_score += 1.0
-                if htf_liq_bias_4h == "below":
-                    liquidity_score += 1.0
-                if htf_liq_bias_1h == "above":
-                    liquidity_score -= 1.0
-                if htf_liq_bias_4h == "above":
-                    liquidity_score -= 1.0
-            else:
-                if htf_liq_bias_1h == "above":
-                    liquidity_score += 1.0
-                if htf_liq_bias_4h == "above":
-                    liquidity_score += 1.0
-                if htf_liq_bias_1h == "below":
-                    liquidity_score -= 1.0
-                if htf_liq_bias_4h == "below":
-                    liquidity_score -= 1.0
-
-            ultra_ok = False
-            if direction == "Dump → Pump":
-                if (
-                    delta_status == "bullish"
-                    and oi_status == "rising"
-                    and trend_1h > 0
-                    and trend_4h >= 0
-                ):
-                    ultra_ok = True
-            else:
-                if (
-                    delta_status == "bearish"
-                    and oi_status == "rising"
-                    and trend_1h < 0
-                    and trend_4h <= 0
-                ):
-                    ultra_ok = True
-
-            htf_ok = False
-            if direction == "Dump → Pump":
-                if (
-                    momentum_1h >= 0
-                    and momentum_strength_1h > 0.5
-                    and vol_regime_1h in ("normal", "high_vol")
-                    and vol_regime_4h != "chaotic"
-                ):
-                    htf_ok = True
-            else:
-                if (
-                    momentum_1h <= 0
-                    and momentum_strength_1h > 0.5
-                    and vol_regime_1h in ("normal", "high_vol")
-                    and vol_regime_4h != "chaotic"
-                ):
-                    htf_ok = True
-
-            div_bonus = 0.0
-            if direction == "Dump → Pump":
-                if momentum_div_1h == "bullish":
-                    div_bonus += 5.0
-                if momentum_div_4h == "bullish":
-                    div_bonus += 3.0
-                if momentum_div_1h == "bearish":
-                    div_bonus -= 4.0
-            else:
-                if momentum_div_1h == "bearish":
-                    div_bonus += 5.0
-                if momentum_div_4h == "bearish":
-                    div_bonus += 3.0
-                if momentum_div_1h == "bullish":
-                    div_bonus -= 4.0
-
-            structure_strength_bonus = (
-                (strength_1h - 3) * 2 + (strength_4h - 3) * 2
-            )
-
-            if ultra_ok and htf_ok:
-                ultra_direction_side = "bullish" if direction == "Dump → Pump" else "bearish"
-                micro_bonus = compute_micro_bonus(
-                    ultra_direction_side,
-                    micro,
-                )
-                footprint_bonus = compute_footprint_signal(
-                    footprint_zones,
-                    ultra_direction_side,
-                )
-
-                ultra_rating = int(
-                    (super_rating + hybrid_rating) / 2
-                    + 20
-                    + micro_bonus
-                    + footprint_bonus
-                    + liquidity_score
-                    + div_bonus
-                    + structure_strength_bonus
-                )
-
-                candidates.append({
-                    "symbol": symbol,
-                    "type": (
-                        "ULTRA HYBRID v6 "
-                        "Habr+Reversal+Pump+Flow+OI+HTF+Structure+Strength+Momentum+Div+Vol+Micro+Footprint+Liquidity+Memory "
-                        f"{direction} ({mode_key})"
-                    ),
-                    "emoji": "🔱",
-                    "price": last_price,
-                    "rating": ultra_rating,
-                    "oi": oi_status,
-                    "funding": funding_rate,
-                    "liq": liq_status,
-                    "flow": flow_status,
-                    "delta": delta_status,
-                    "trend_score": trend_score,
-                    "risk_score": risk_score,
-                    "trend_15m": trend_15m,
-                    "trend_1h": trend_1h,
-                    "trend_4h": trend_4h,
-                    "meta_closes": closes_1m,
-                    "meta_highs": highs_1m,
-                    "meta_lows": lows_1m,
-                    "liq_map_bias": liq_bias,
-                    "liq_map_strongest": liq_strongest,
-                    "liq_map_vac_up": liq_vac_up,
-                    "liq_map_vac_down": liq_vac_down,
-                    "htf_momentum_1h": momentum_1h,
-                    "htf_momentum_4h": momentum_4h,
-                    "htf_momentum_strength_1h": momentum_strength_1h,
-                    "htf_momentum_strength_4h": momentum_strength_4h,
-                    "htf_vol_regime_1h": vol_regime_1h,
-                    "htf_vol_regime_4h": vol_regime_4h,
-                    "htf_liq_1h": htf_liq_1h,
-                    "htf_liq_4h": htf_liq_4h,
-                    "htf_strength_1h": strength_1h,
-                    "htf_strength_4h": strength_4h,
-                    "htf_div_1h": momentum_div_1h,
-                    "htf_div_4h": momentum_div_4h,
-                })
-
         if habr_adj >= min_score:
             candidates.append({
                 "symbol": symbol,
@@ -1027,6 +1003,13 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "liq_map_vac_up": liq_vac_up,
             "liq_map_vac_down": liq_vac_down,
         })
+        set_symbol_state(symbol, {
+            "type": "pump",
+            "ts": now_ts,
+            "price": last_price,
+            "rating": adj,
+            "delay_bars": 0,
+        })
 
     if is_dump and dump_rating >= min_score:
         adj = adjust_rating_with_context(
@@ -1068,6 +1051,18 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "liq_map_vac_up": liq_vac_up,
             "liq_map_vac_down": liq_vac_down,
         })
+        set_symbol_state(symbol, {
+            "type": "dump",
+            "ts": now_ts,
+            "price": last_price,
+            "rating": adj,
+            "delay_bars": 0,
+        })
+
+    if reversal_state:
+        delay_bars = int(reversal_state.get("delay_bars", 0)) + 1
+        reversal_state["delay_bars"] = delay_bars
+        set_symbol_state(symbol, reversal_state)
 
     if is_rev_pump and rev_pump_rating >= min_score:
         adj = adjust_rating_with_context(
@@ -1085,30 +1080,51 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         )
         adj += apply_reversal_filters("Pump → Dump", closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
 
-        candidates.append({
-            "symbol": symbol,
-            "type": "REVERSAL Pump → Dump",
-            "emoji": "🟡",
-            "price": last_price,
-            "rating": adj,
-            "oi": oi_status,
-            "funding": funding_rate,
-            "liq": liq_status,
-            "flow": flow_status,
-            "delta": delta_status,
-            "trend_score": trend_score,
-            "risk_score": risk_score,
-            "trend_15m": trend_15m,
-            "trend_1h": trend_1h,
-            "trend_4h": trend_4h,
-            "meta_closes": closes_1m,
-            "meta_highs": highs_1m,
-            "meta_lows": lows_1m,
-            "liq_map_bias": liq_bias,
-            "liq_map_strongest": liq_strongest,
-            "liq_map_vac_up": liq_vac_up,
-            "liq_map_vac_down": liq_vac_down,
-        })
+        if (
+            _passes_strict_reversal_filters(
+                strictness_level=strictness_level,
+                direction="Pump → Dump",
+                flow_status=flow_status,
+                delta_status=delta_status,
+                event_1h=event_1h,
+                event_4h=event_4h,
+                structure_1h=structure_1h,
+                structure_4h=structure_4h,
+            )
+            and _should_allow_reversal(
+                direction="Pump → Dump",
+                state=reversal_state,
+                requires_state=reversal_requires_state,
+                min_score=min_score,
+                rating=adj,
+                extra_min_bonus=reversal_min_score_bonus,
+                min_delay_bars=reversal_min_delay_bars,
+            )
+        ):
+            candidates.append({
+                "symbol": symbol,
+                "type": "REVERSAL Pump → Dump",
+                "emoji": "🟡",
+                "price": last_price,
+                "rating": adj,
+                "oi": oi_status,
+                "funding": funding_rate,
+                "liq": liq_status,
+                "flow": flow_status,
+                "delta": delta_status,
+                "trend_score": trend_score,
+                "risk_score": risk_score,
+                "trend_15m": trend_15m,
+                "trend_1h": trend_1h,
+                "trend_4h": trend_4h,
+                "meta_closes": closes_1m,
+                "meta_highs": highs_1m,
+                "meta_lows": lows_1m,
+                "liq_map_bias": liq_bias,
+                "liq_map_strongest": liq_strongest,
+                "liq_map_vac_up": liq_vac_up,
+                "liq_map_vac_down": liq_vac_down,
+            })
 
     if rev.get("reversal") and rev.get("rating", 0) >= min_score:
         direction = "Dump → Pump" if rev["reversal"] == "bullish" else "Pump → Dump"
@@ -1127,30 +1143,51 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         )
         adj += apply_reversal_filters(direction, closes_1m, highs_1m, lows_1m, volumes_1m, delta_status)
 
-        candidates.append({
-            "symbol": symbol,
-            "type": f"REVERSAL {direction}",
-            "emoji": "🔵",
-            "price": last_price,
-            "rating": adj,
-            "oi": oi_status,
-            "funding": funding_rate,
-            "liq": liq_status,
-            "flow": flow_status,
-            "delta": delta_status,
-            "trend_score": trend_score,
-            "risk_score": risk_score,
-            "trend_15m": trend_15m,
-            "trend_1h": trend_1h,
-            "trend_4h": trend_4h,
-            "meta_closes": closes_1m,
-            "meta_highs": highs_1m,
-            "meta_lows": lows_1m,
-            "liq_map_bias": liq_bias,
-            "liq_map_strongest": liq_strongest,
-            "liq_map_vac_up": liq_vac_up,
-            "liq_map_vac_down": liq_vac_down,
-        })
+        if (
+            _passes_strict_reversal_filters(
+                strictness_level=strictness_level,
+                direction=direction,
+                flow_status=flow_status,
+                delta_status=delta_status,
+                event_1h=event_1h,
+                event_4h=event_4h,
+                structure_1h=structure_1h,
+                structure_4h=structure_4h,
+            )
+            and _should_allow_reversal(
+                direction=direction,
+                state=reversal_state,
+                requires_state=reversal_requires_state,
+                min_score=min_score,
+                rating=adj,
+                extra_min_bonus=reversal_min_score_bonus,
+                min_delay_bars=reversal_min_delay_bars,
+            )
+        ):
+            candidates.append({
+                "symbol": symbol,
+                "type": f"REVERSAL {direction}",
+                "emoji": "🔵",
+                "price": last_price,
+                "rating": adj,
+                "oi": oi_status,
+                "funding": funding_rate,
+                "liq": liq_status,
+                "flow": flow_status,
+                "delta": delta_status,
+                "trend_score": trend_score,
+                "risk_score": risk_score,
+                "trend_15m": trend_15m,
+                "trend_1h": trend_1h,
+                "trend_4h": trend_4h,
+                "meta_closes": closes_1m,
+                "meta_highs": highs_1m,
+                "meta_lows": lows_1m,
+                "liq_map_bias": liq_bias,
+                "liq_map_strongest": liq_strongest,
+                "liq_map_vac_up": liq_vac_up,
+                "liq_map_vac_down": liq_vac_down,
+            })
 
     if not candidates:
         return None
@@ -1163,11 +1200,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         base = c["rating"]
         t = c["type"]
 
-        if "Dump → Pump" in t or "PUMP" in t:
-            direction_side = "bullish"
-        elif "Pump → Dump" in t or "DUMP" in t:
-            direction_side = "bearish"
-        else:
+        direction_side = infer_direction_side(t)
+        if direction_side is None:
             direction_side = "bullish" if trend_score >= 0 else "bearish"
 
         base += impulse_score
@@ -1185,14 +1219,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             mem_bias += 10.0
         if symbol_regime == "dumpy" and "DUMP" in t:
             mem_bias += 10.0
-        if symbol_regime == "trending" and "ULTRA HYBRID" in t:
-            mem_bias += 8.0
         if symbol_regime == "mean_reverting" and "REVERSAL" in t:
             mem_bias += 8.0
         if symbol_regime == "chaotic":
             mem_bias -= 12.0
-        if symbol_regime == "stable" and "ULTRA HYBRID" in t:
-            mem_bias += 5.0
 
         base += mem_bias
 
@@ -1232,6 +1262,15 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         c["memory_ctx"] = sf3["memory_ctx"]
         c["sf3_weights"] = sf3["weights"]
         c["symbol_memory_profile"] = symbol_profile
+        aligned_rating = apply_alignment_penalties(
+            rating=c["rating"],
+            direction_side=direction_side,
+            trend_1h=trend_1h,
+            trend_4h=trend_4h,
+            flow_status=flow_status,
+            impulse_score=impulse_score,
+        )
+        c["rating"] = max(0, min(int(aligned_rating), 100))
 
     candidates.sort(key=lambda x: x["rating"], reverse=True)
     best = candidates[0]
@@ -1256,6 +1295,9 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
     async with aiohttp.ClientSession() as session:
         while True:
             try:
+                settings = load_settings()
+                max_concurrency = int(settings.get("max_concurrency", 20))
+                semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency > 0 else None
                 tickers = await fetch_tickers(session)
 
                 symbols = [
@@ -1264,8 +1306,14 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     if t.get("symbol", "").endswith("USDT")
                 ]
 
+                async def _run_symbol(symbol: str, info: dict):
+                    if semaphore is None:
+                        return await analyze_symbol_async(session, symbol, min_score, info)
+                    async with semaphore:
+                        return await analyze_symbol_async(session, symbol, min_score, info)
+
                 tasks = [
-                    analyze_symbol_async(session, s, min_score, tinfo)
+                    _run_symbol(s, tinfo)
                     for s, tinfo in symbols
                 ]
 

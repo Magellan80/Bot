@@ -1,7 +1,7 @@
 import asyncio
 from contextlib import suppress
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter, TelegramServerError
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -180,6 +180,17 @@ def bot_mode_menu():
     ])
 
 
+def strictness_menu():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Мягкий", callback_data="strictness_soft"),
+            InlineKeyboardButton(text="Средний", callback_data="strictness_medium"),
+            InlineKeyboardButton(text="Строгий", callback_data="strictness_strict"),
+        ],
+        [InlineKeyboardButton(text="⬅ Назад", callback_data="back_main")],
+    ])
+
+
 # ============================================================
 #   MAIN MENU
 # ============================================================
@@ -192,6 +203,13 @@ def main_menu():
 
     bot_mode_key = settings.get("bot_mode", "SCREENER")
     bot_mode_name = "СКРИНЕР + ТОРГОВЛЯ" if bot_mode_key == "TRADING" else "СКРИНЕР"
+    strictness_level = settings.get("strictness_level", "strict")
+    strictness_labels = {
+        "soft": "МЯГКО",
+        "medium": "СРЕДНЕ",
+        "strict": "СТРОГО",
+    }
+    strictness_name = strictness_labels.get(strictness_level, "СТРОГО")
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="▶ Запустить сканер", callback_data="start_scanner")],
@@ -199,6 +217,7 @@ def main_menu():
         [InlineKeyboardButton(text="🎛 Режим A/B/C", callback_data="mode_menu")],
         [InlineKeyboardButton(text="⚙ Чувствительность", callback_data="sensitivity_menu")],
         [InlineKeyboardButton(text="🤖 Режим работы бота", callback_data="bot_mode_menu")],
+        [InlineKeyboardButton(text="🧭 Строгость: " + strictness_name, callback_data="strictness_menu")],
         [InlineKeyboardButton(text="📊 Статус сканера", callback_data="scanner_status")],
     ])
 
@@ -207,6 +226,7 @@ def main_menu():
         f"Текущий режим сигналов: {mode_name} ({mode_key})\n"
         f"Текущая чувствительность: {min_score}\n"
         f"Режим работы бота: {bot_mode_name}\n"
+        f"Строгость сигналов: {strictness_name}\n"
     )
     return text, kb
 
@@ -355,20 +375,48 @@ async def cmd_start(message: types.Message):
 #   CALLBACKS
 # ============================================================
 
-@dp.callback_query(lambda c: c.data == "back_main")
+@dp.callback_query(F.data == "back_main")
 async def cb_back_main(call: CallbackQuery):
     await safe_answer(call)
     text, kb = main_menu()
     await safe_edit(call.message, text, reply_markup=kb)
 
 
-@dp.callback_query(lambda c: c.data == "sensitivity_menu")
+@dp.callback_query(F.data == "strictness_menu")
+async def cb_strictness_menu(call: CallbackQuery):
+    await safe_answer(call)
+    await safe_edit(call.message, "Выбери строгость сигналов:", reply_markup=strictness_menu())
+
+
+@dp.callback_query(F.data.startswith("strictness_"))
+async def cb_set_strictness(call: CallbackQuery):
+    await safe_answer(call)
+    level = call.data.split("_", 1)[1]
+    if level not in ("soft", "medium", "strict"):
+        return
+    labels = {
+        "soft": "МЯГКО",
+        "medium": "СРЕДНЕ",
+        "strict": "СТРОГО",
+    }
+    settings = load_settings()
+    settings["strictness_level"] = level
+    save_settings(settings)
+    text, kb = main_menu()
+    await safe_edit(
+        call.message,
+        f"Строгость переключена: {labels[level]}\n\n" + text,
+        reply_markup=kb,
+    )
+
+
+@dp.callback_query(F.data == "sensitivity_menu")
 async def cb_sensitivity_menu(call: CallbackQuery):
     await safe_answer(call)
     await safe_edit(call.message, "Выбери чувствительность:", reply_markup=sensitivity_menu())
 
 
-@dp.callback_query(lambda c: c.data.startswith("sens_"))
+@dp.callback_query(F.data.startswith("sens_"))
 async def cb_set_sensitivity(call: CallbackQuery):
     await safe_answer(call)
 
@@ -381,13 +429,13 @@ async def cb_set_sensitivity(call: CallbackQuery):
     await safe_edit(call.message, f"Чувствительность установлена: {value}\n\n" + text, reply_markup=kb)
 
 
-@dp.callback_query(lambda c: c.data == "mode_menu")
+@dp.callback_query(F.data == "mode_menu")
 async def cb_mode_menu(call: CallbackQuery):
     await safe_answer(call)
     await safe_edit(call.message, "Выбери режим A/B/C:", reply_markup=mode_menu())
 
 
-@dp.callback_query(lambda c: c.data.startswith("mode_"))
+@dp.callback_query(F.data.startswith("mode_"))
 async def cb_set_mode(call: CallbackQuery):
     await safe_answer(call)
 
@@ -409,7 +457,7 @@ async def cb_set_mode(call: CallbackQuery):
     )
 
 
-@dp.callback_query(lambda c: c.data == "bot_mode_menu")
+@dp.callback_query(F.data == "bot_mode_menu")
 async def cb_bot_mode_menu(call: CallbackQuery):
     await safe_answer(call)
 
@@ -425,7 +473,7 @@ async def cb_bot_mode_menu(call: CallbackQuery):
     await safe_edit(call.message, "Выбери режим работы бота:", reply_markup=bot_mode_menu())
 
 
-@dp.callback_query(lambda c: c.data.startswith("botmode_"))
+@dp.callback_query(F.data.startswith("botmode_"))
 async def cb_set_bot_mode(call: CallbackQuery):
     await safe_answer(call)
 
@@ -470,7 +518,7 @@ async def cb_set_bot_mode(call: CallbackQuery):
     await safe_edit(call.message, msg + "\n\n" + text, reply_markup=kb)
 
 
-@dp.callback_query(lambda c: c.data == "start_scanner")
+@dp.callback_query(F.data == "start_scanner")
 async def cb_start_scanner(call: CallbackQuery):
     global scanner_task, engine, price_task, sync_task, ws_task, ws_client, kill_task
 
@@ -540,7 +588,7 @@ async def cb_start_scanner(call: CallbackQuery):
     await safe_edit(call.message, status_line + "\n\n" + text, reply_markup=kb)
 
 
-@dp.callback_query(lambda c: c.data == "stop_scanner")
+@dp.callback_query(F.data == "stop_scanner")
 async def cb_stop_scanner(call: CallbackQuery):
     global scanner_task, ws_task, ws_client
 
@@ -563,7 +611,7 @@ async def cb_stop_scanner(call: CallbackQuery):
     )
 
 
-@dp.callback_query(lambda c: c.data == "scanner_status")
+@dp.callback_query(F.data == "scanner_status")
 async def cb_scanner_status(call: CallbackQuery):
     await safe_answer(call)
 
@@ -574,6 +622,13 @@ async def cb_scanner_status(call: CallbackQuery):
     min_score = settings.get("min_score", DEFAULT_MIN_SCORE)
     bot_mode = settings.get("bot_mode", "SCREENER")
     bot_mode_name = "СКРИНЕР + ТОРГОВЛЯ" if bot_mode == "TRADING" else "СКРИНЕР"
+    strictness_level = settings.get("strictness_level", "strict")
+    strictness_labels = {
+        "soft": "МЯГКО",
+        "medium": "СРЕДНЕ",
+        "strict": "СТРОГО",
+    }
+    strictness_name = strictness_labels.get(strictness_level, "СТРОГО")
 
     text, kb = main_menu()
     await safe_edit(
@@ -581,7 +636,8 @@ async def cb_scanner_status(call: CallbackQuery):
         f"Статус сканера: {status}\n"
         f"Текущий режим сигналов: {mode_name} ({mode_key})\n"
         f"Текущая чувствительность: {min_score}\n"
-        f"Режим работы бота: {bot_mode_name}\n\n" + text,
+        f"Режим работы бота: {bot_mode_name}\n"
+        f"Строгость сигналов: {strictness_name}\n\n" + text,
         reply_markup=kb
     )
 

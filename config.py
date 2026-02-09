@@ -59,13 +59,28 @@ DEFAULT_MIN_SCORE = 40
 
 
 def load_settings():
+    defaults = {
+        "mode": "A",
+        "min_score": DEFAULT_MIN_SCORE,
+        "strictness_level": "strict",
+        "reversal_requires_state": True,
+        "reversal_state_ttl_sec": 7200,
+        "reversal_min_score_bonus": 10,
+        "reversal_min_delay_bars": 3,
+        "max_concurrency": 20,
+        "orderbook_max_spread_pct": 0.5,
+        "orderbook_min_total_vol": 500.0,
+        "orderbook_depth_n": 10,
+    }
     if not os.path.exists(SETTINGS_FILE):
-        return {
-            "mode": "A",
-            "min_score": DEFAULT_MIN_SCORE
-        }
+        return defaults
     with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    if isinstance(data, dict):
+        defaults.update(data)
+        if "strictness_level" not in data and "strict_mode" in data:
+            defaults["strictness_level"] = "strict" if data["strict_mode"] else "soft"
+    return defaults
 
 
 def save_settings(settings: dict):
@@ -76,6 +91,8 @@ def save_settings(settings: dict):
 def get_current_mode():
     settings = load_settings()
     mode_key = settings.get("mode", "A")
+    if mode_key not in MODES:
+        mode_key = "A"
     return mode_key, MODES[mode_key]
 
 
