@@ -1,5 +1,6 @@
 {
     "min_score": 40,
     "mode": "A",
-    "bot_mode": "SCREENER"
+    "bot_mode": "SCREENER",
+    "strictness_level": "strict"
 }
