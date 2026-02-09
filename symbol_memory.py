@@ -27,6 +27,30 @@ def get_symbol_memory(symbol: str) -> Dict[str, Any]:
     return data.get(symbol, {})
 
 
+def get_symbol_state(symbol: str) -> Dict[str, Any]:
+    data = _load_raw()
+    entry = data.get(symbol, {})
+    state = entry.get("state", {})
+    return state if isinstance(state, dict) else {}
+
+
+def set_symbol_state(symbol: str, state: Dict[str, Any]) -> None:
+    data = _load_raw()
+    entry = data.get(symbol, {})
+    entry["state"] = state
+    data[symbol] = entry
+    _save_raw(data)
+
+
+def clear_symbol_state(symbol: str) -> None:
+    data = _load_raw()
+    entry = data.get(symbol, {})
+    if "state" in entry:
+        entry.pop("state", None)
+        data[symbol] = entry
+        _save_raw(data)
+
+
 def _classify_behavior(stats: Dict[str, Any]) -> Dict[str, Any]:
     pump_cnt = stats.get("pump_cnt", 0)
     dump_cnt = stats.get("dump_cnt", 0)
@@ -90,6 +114,7 @@ def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any
 
     hist = entry.get("history", [])
     stats = entry.get("stats", {})
+    state = entry.get("state", {})
 
     hist.append({
         "ts": now,
@@ -123,6 +148,8 @@ def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any
     entry["history"] = hist
     entry["stats"] = stats
     entry["profile"] = profile
+    if state:
+        entry["state"] = state
     entry["updated_ts"] = now
 
     data[symbol] = entry
