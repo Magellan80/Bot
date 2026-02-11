@@ -64,6 +64,55 @@ _BTC_CTX_CACHE = {
     "regime": "neutral",
 }
 
+# =====================================================
+# SCREENER V3 MAX — MODE SYSTEM (Balanced Pro DEFAULT)
+# =====================================================
+
+SCREENER_MODE = "balanced"  # conservative | balanced | aggressive
+
+MODE_PROFILES = {
+    "conservative": {
+        "min_score_shift": +5,
+        "btc_trend_boost": 1.02,
+        "btc_ranging_boost": 1.00,
+        "btc_high_vol_factor": 0.85,
+        "impulse_multiplier": 0.9,
+        "memory_boost": 0.9,
+        "reversal_bonus": 0.95,
+        "elite_threshold": 88,
+    },
+    "balanced": {  # Balanced Pro MAX (DEFAULT)
+        "min_score_shift": 0,
+        "btc_trend_boost": 1.05,
+        "btc_ranging_boost": 1.07,
+        "btc_high_vol_factor": 0.95,
+        "impulse_multiplier": 1.05,
+        "memory_boost": 1.05,
+        "reversal_bonus": 1.05,
+        "elite_threshold": 85,
+    },
+    "aggressive": {
+        "min_score_shift": -8,
+        "btc_trend_boost": 1.10,
+        "btc_ranging_boost": 1.10,
+        "btc_high_vol_factor": 1.00,
+        "impulse_multiplier": 1.15,
+        "memory_boost": 1.10,
+        "reversal_bonus": 1.15,
+        "elite_threshold": 80,
+    }
+}
+
+
+def get_mode_profile():
+    return MODE_PROFILES.get(SCREENER_MODE, MODE_PROFILES["balanced"])
+
+
+def set_screener_mode(mode: str):
+    global SCREENER_MODE
+    if mode in MODE_PROFILES:
+        SCREENER_MODE = mode
+
 
 def symbol_on_cooldown(symbol: str) -> bool:
     ts = _last_signal_ts.get(symbol)
@@ -83,6 +132,17 @@ def log_signal(s: dict):
             f"{s['type']} | {s['symbol']} | price={s['price']:.4f} | "
             f"rating={s['rating']} | trend={s['trend_score']} | risk={s['risk_score']}\n"
         )
+
+
+# v2.0: НОВАЯ ФУНКЦИЯ для диагностики
+def log_blocked_signal(symbol: str, reason: str, details: str = ""):
+    """Логирование блокированных сигналов для диагностики"""
+    with open("blocked_signals.log", "a", encoding="utf-8") as f:
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        f.write(f"{timestamp} | {symbol} | Blocked by: {reason}")
+        if details:
+            f.write(f" | {details}")
+        f.write("\n")
 
 
 def log_error(e: Exception):
@@ -243,31 +303,6 @@ def compute_atr_from_klines(klines, period: int = 14) -> float:
     for tr in trs[period:]:
         atr = alpha * tr + (1 - alpha) * atr
     return atr
-
-
-def get_adaptive_min_score(base_min_score: int, btc_ctx: dict, settings: dict) -> int:
-    if not settings.get("adaptive_min_score_enabled", True):
-        return int(base_min_score)
-
-    min_score = int(base_min_score)
-    regime = btc_ctx.get("regime", "neutral")
-    volatility = float(btc_ctx.get("volatility", 0.0))
-
-    if regime == "trending":
-        min_score += int(settings.get("adaptive_min_score_trending_bonus", 3))
-    elif regime == "high_vol":
-        min_score += int(settings.get("adaptive_min_score_high_vol_bonus", 10))
-    elif regime == "ranging":
-        min_score += int(settings.get("adaptive_min_score_ranging_bonus", -5))
-
-    if volatility >= 1.5:
-        min_score += 3
-    elif volatility <= 0.6:
-        min_score -= 2
-
-    min_floor = int(settings.get("adaptive_min_score_min", 20))
-    min_ceiling = int(settings.get("adaptive_min_score_max", 80))
-    return max(min_floor, min(min_score, min_ceiling))
 
 
 def build_htf_liquidity_light(
@@ -455,13 +490,9 @@ async def compute_htf_context(session, symbol: str):
         log_error(e)
 
     return htf
-def evaluate_orderbook_quality(
-    orderbook: dict,
-    last_price: float,
-    max_spread_pct: float = 0.5,
-    min_total_vol: float = 500.0,
-    depth_n: int = 10,
-):
+
+
+def evaluate_orderbook_quality(orderbook: dict, last_price: float):
     try:
         bids = orderbook.get("b", []) or orderbook.get("bids", [])
         asks = orderbook.get("a", []) or orderbook.get("asks", [])
@@ -473,16 +504,21 @@ def evaluate_orderbook_quality(
 
         best_bid = float(bids_sorted[0][0])
         best_ask = float(asks_sorted[0][0])
+
         if best_ask <= 0 or best_bid <= 0 or best_ask <= best_bid:
             return False, {}
 
         mid = (best_ask + best_bid) / 2
         spread_pct = (best_ask - best_bid) / mid * 100
 
+        depth_n = 10
         bid_vol = sum(float(x[1]) for x in bids_sorted[:depth_n])
         ask_vol = sum(float(x[1]) for x in asks_sorted[:depth_n])
 
         total_vol = bid_vol + ask_vol
+
+        max_spread_pct = 1.0  # v2.0: было 0.5
+        min_total_vol = 200.0  # v2.0: было 500.0
 
         ok = True
         if spread_pct > max_spread_pct:
@@ -498,7 +534,7 @@ def evaluate_orderbook_quality(
         }
     except Exception as e:
         log_error(e)
-        return {}
+        return False, {}
 
 
 def compute_impulse_score(closes, volumes):
@@ -629,12 +665,14 @@ def _passes_strict_reversal_filters(
     event_ok = False
 
     if direction == "Dump → Pump":
-        if flow_status == "aggressive_sellers" or delta_status == "bearish":
+        # v2.0: flow фильтры только в strict режиме
+        if strictness_level == "strict" and (flow_status == "aggressive_sellers" or delta_status == "bearish"):
             return False
         structure_ok = structure_1h == "bullish" or structure_4h == "bullish"
         event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
     else:
-        if flow_status == "aggressive_buyers" or delta_status == "bullish":
+        # v2.0: flow фильтры только в strict режиме
+        if strictness_level == "strict" and (flow_status == "aggressive_buyers" or delta_status == "bullish"):
             return False
         structure_ok = structure_1h == "bearish" or structure_4h == "bearish"
         event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
@@ -659,13 +697,7 @@ async def compute_btc_stability(session):
     try:
         kl = await fetch_klines(session, "BTCUSDT", interval="1", limit=60)
         if not kl or len(kl) < 20:
-            _BTC_CTX_CACHE = {
-                "ts": now,
-                "factor": 1.0,
-                "regime": "neutral",
-                "volatility": 0.0,
-                "change_pct": 0.0,
-            }
+            _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
             return _BTC_CTX_CACHE
 
         closes = [float(c[4]) for c in kl][::-1]
@@ -680,7 +712,7 @@ async def compute_btc_stability(session):
         factor = 1.0
 
         if volat > 1.5:
-            factor = 0.8
+            factor = 0.85  # v2.0: было 0.8
             regime = "high_vol"
 
         if abs(change_pct) > 1.0 and volat < 2.0:
@@ -688,48 +720,30 @@ async def compute_btc_stability(session):
             regime = "trending"
 
         if abs(change_pct) < 0.3 and volat < 0.7:
-            factor = 1.1
+            factor = 1.15  # v2.0: было 1.1
             regime = "ranging"
 
-        _BTC_CTX_CACHE = {
-            "ts": now,
-            "factor": factor,
-            "regime": regime,
-            "volatility": volat,
-            "change_pct": change_pct,
-        }
+        _BTC_CTX_CACHE = {"ts": now, "factor": factor, "regime": regime}
         return _BTC_CTX_CACHE
     except Exception as e:
         log_error(e)
-        _BTC_CTX_CACHE = {
-            "ts": now,
-            "factor": 1.0,
-            "regime": "neutral",
-            "volatility": 0.0,
-            "change_pct": 0.0,
-        }
+        _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
         return _BTC_CTX_CACHE
 
 
-async def analyze_symbol_async(
-    session,
-    symbol: str,
-    min_score: int,
-    ticker_info: dict,
-    btc_ctx: dict | None = None,
-):
+async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
     settings = load_settings()
-    strictness_level = str(settings.get("strictness_level", "strict")).lower()
+    strictness_level = str(settings.get("strictness_level", "soft")).lower()  # v2.0: было "strict"
     if strictness_level not in ("soft", "medium", "strict"):
         strictness_level = "strict"
-    ob_max_spread_pct = float(settings.get("orderbook_max_spread_pct", 0.5))
-    ob_min_total_vol = float(settings.get("orderbook_min_total_vol", 500.0))
-    ob_depth_n = int(settings.get("orderbook_depth_n", 10))
-    reversal_requires_state = bool(settings.get("reversal_requires_state", True))
+    reversal_requires_state = bool(settings.get("reversal_requires_state", False))  # v2.0: было True
     reversal_state_ttl_sec = int(settings.get("reversal_state_ttl_sec", 7200))
     reversal_min_score_bonus = int(settings.get("reversal_min_score_bonus", 10))
     reversal_min_delay_bars = int(settings.get("reversal_min_delay_bars", 3))
     mode_key, mode_cfg = get_current_mode()
+    mode_profile = get_mode_profile()
+    min_score = max(0, min_score + mode_profile["min_score_shift"])
+
     now_ts = time.time()
 
     if symbol_on_cooldown(symbol):
@@ -759,14 +773,11 @@ async def analyze_symbol_async(
     liq_vac_up = liquidity.get("vacuum_up", 0)
     liq_vac_down = liquidity.get("vacuum_down", 0)
 
-    ob_ok, ob_meta = evaluate_orderbook_quality(
-        orderbook,
-        last_price,
-        max_spread_pct=ob_max_spread_pct,
-        min_total_vol=ob_min_total_vol,
-        depth_n=ob_depth_n,
-    )
+    ob_ok, ob_meta = evaluate_orderbook_quality(orderbook, last_price)
     if not ob_ok:
+        # v2.0: Логируем почему заблокировано
+        log_blocked_signal(symbol, "orderbook_quality", 
+                          f"spread={ob_meta.get('spread_pct', 0):.2f}%, vol={ob_meta.get('total_vol_10', 0):.0f}")
         return None
 
     oi_now, oi_prev = await fetch_open_interest(session, symbol)
@@ -841,7 +852,7 @@ async def analyze_symbol_async(
 
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
 
-    btc_ctx = btc_ctx or await compute_btc_stability(session)
+    btc_ctx = await compute_btc_stability(session)
     btc_factor = btc_ctx["factor"]
     btc_regime = btc_ctx["regime"]
     reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
@@ -853,35 +864,36 @@ async def analyze_symbol_async(
         direction = "Dump → Pump" if habr["direction"] == "bullish" else "Pump → Dump"
         habr_rating = habr["rating"]
 
+        # v2.0: Ослабленные penalties для больше сигналов
         if habr["direction"] == "bullish" and trend_score < -3:
-            habr_rating *= 0.7
+            habr_rating *= 0.85  # было 0.7
         if habr["direction"] == "bearish" and trend_score > 3:
-            habr_rating *= 0.7
+            habr_rating *= 0.85  # было 0.7
 
         if habr["direction"] == "bullish":
             if trend_1h < -2 or trend_4h < -2:
-                habr_rating *= 0.55
+                habr_rating *= 0.70  # было 0.55
             elif trend_1h > 2 and trend_4h >= 0:
                 habr_rating *= 1.15
         else:
             if trend_1h > 2 or trend_4h > 2:
-                habr_rating *= 0.55
+                habr_rating *= 0.70  # было 0.55
             elif trend_1h < -2 and trend_4h <= 0:
                 habr_rating *= 1.15
 
         fbias = funding_bias(funding_rate) if funding_rate is not None else None
         if fbias == "bullish" and habr["direction"] == "bearish":
-            habr_rating *= 0.85
+            habr_rating *= 0.90  # было 0.85
         if fbias == "bearish" and habr["direction"] == "bullish":
-            habr_rating *= 0.85
+            habr_rating *= 0.90  # было 0.85
 
         if oi_status == "falling":
-            habr_rating *= 0.9
+            habr_rating *= 0.92  # было 0.9
 
         if habr["direction"] == "bullish" and delta_status == "bearish":
-            habr_rating *= 0.9
+            habr_rating *= 0.92  # было 0.9
         if habr["direction"] == "bearish" and delta_status == "bullish":
-            habr_rating *= 0.9
+            habr_rating *= 0.92  # было 0.9
 
         habr_adj = adjust_rating_with_context(
             habr_rating,
@@ -954,6 +966,7 @@ async def analyze_symbol_async(
                 pump_side = "bearish"
 
             if pump_side and (
+
                 (pump_side == "bullish" and habr["direction"] == "bullish" and rev["reversal"] == "bullish")
                 or (pump_side == "bearish" and habr["direction"] == "bearish" and rev["reversal"] == "bearish")
             ):
@@ -1172,6 +1185,7 @@ async def analyze_symbol_async(
                 "liq_map_vac_up": liq_vac_up,
                 "liq_map_vac_down": liq_vac_down,
             })
+
     if rev.get("reversal") and rev.get("rating", 0) >= min_score:
         direction = "Dump → Pump" if rev["reversal"] == "bullish" else "Pump → Dump"
         adj = adjust_rating_with_context(
@@ -1268,7 +1282,7 @@ async def analyze_symbol_async(
         if symbol_regime == "mean_reverting" and "REVERSAL" in t:
             mem_bias += 8.0
         if symbol_regime == "chaotic":
-            mem_bias -= 12.0
+            mem_bias -= 8.0  # v2.0: было -12.0
 
         base += mem_bias
 
@@ -1341,11 +1355,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
     async with aiohttp.ClientSession() as session:
         while True:
             try:
-                settings = load_settings()
-                max_concurrency = int(settings.get("max_concurrency", 20))
-                semaphore = asyncio.Semaphore(max_concurrency) if max_concurrency > 0 else None
-                btc_ctx = await compute_btc_stability(session)
-                effective_min_score = get_adaptive_min_score(min_score, btc_ctx, settings)
                 tickers = await fetch_tickers(session)
 
                 symbols = [
@@ -1354,26 +1363,8 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     if t.get("symbol", "").endswith("USDT")
                 ]
 
-                async def _run_symbol(symbol: str, info: dict):
-                    if semaphore is None:
-                        return await analyze_symbol_async(
-                            session,
-                            symbol,
-                            effective_min_score,
-                            info,
-                            btc_ctx=btc_ctx,
-                        )
-                    async with semaphore:
-                        return await analyze_symbol_async(
-                            session,
-                            symbol,
-                            effective_min_score,
-                            info,
-                            btc_ctx=btc_ctx,
-                        )
-
                 tasks = [
-                    _run_symbol(s, tinfo)
+                    analyze_symbol_async(session, s, min_score, tinfo)
                     for s, tinfo in symbols
                 ]
 
@@ -1388,20 +1379,22 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                         market_ctx = s.get("market_ctx", {}) or {}
                         vol_cluster = s.get("vol_cluster", {}) or {}
                         mem_profile = (s.get("symbol_memory") or {}).get("profile", {}) or {}
+                        pump_prob = float(mem_profile.get("pump_probability") or 0.0)
+                        dump_prob = float(mem_profile.get("dump_probability") or 0.0)
+                        confidence = float(s.get("confidence") or 0.0)
 
                         text = (
                             f"{s['emoji']} {s['type']} — {s['symbol']}\n"
                             f"Цена: {s['price']:.4f} USDT\n"
                             f"Сила сигнала: {s['rating']}/100\n"
-                            f"Уверенность: {s.get('confidence', 0):.2f}\n"
-                            f"Min Score: {effective_min_score} (base {min_score})\n"
+                            f"Уверенность: {confidence:.2f}\n"
                             f"Trend Score: {s['trend_score']}\n"
                             f"Risk Score: {s['risk_score']}\n"
                             f"HTF 15m: {s.get('trend_15m', 0)} | 1h: {s.get('trend_1h', 0)} | 4h: {s.get('trend_4h', 0)}\n"
                             f"Symbol Regime: {symbol_regime.get('regime')} (strength={symbol_regime.get('strength')})\n"
                             f"Market Regime: {market_ctx.get('market_regime')} | Risk: {market_ctx.get('risk')}\n"
                             f"Vol Cluster: {vol_cluster.get('cluster')} | VolScore: {vol_cluster.get('volatility_score')}\n"
-                            f"Symbol Memory Regime: {mem_profile.get('regime')} | PumpProb: {mem_profile.get('pump_probability'):.2f} | DumpProb: {mem_profile.get('dump_probability'):.2f}\n"
+                            f"Symbol Memory Regime: {mem_profile.get('regime')} | PumpProb: {pump_prob:.2f} | DumpProb: {dump_prob:.2f}\n"
                             f"OI: {s['oi']}\n"
                             f"{format_funding_text(s['funding'])}\n"
                             f"{format_liq_text(s['liq'])}\n"
@@ -1434,3 +1427,4 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     pass
                 await asyncio.sleep(5)
                 continue
+                        

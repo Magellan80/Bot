@@ -63,20 +63,10 @@ def load_settings():
         "mode": "A",
         "min_score": DEFAULT_MIN_SCORE,
         "strictness_level": "strict",
-        "adaptive_min_score_enabled": True,
-        "adaptive_min_score_high_vol_bonus": 10,
-        "adaptive_min_score_ranging_bonus": -5,
-        "adaptive_min_score_trending_bonus": 3,
-        "adaptive_min_score_min": 20,
-        "adaptive_min_score_max": 80,
         "reversal_requires_state": True,
         "reversal_state_ttl_sec": 7200,
         "reversal_min_score_bonus": 10,
         "reversal_min_delay_bars": 3,
-        "max_concurrency": 20,
-        "orderbook_max_spread_pct": 0.5,
-        "orderbook_min_total_vol": 500.0,
-        "orderbook_depth_n": 10,
     }
     if not os.path.exists(SETTINGS_FILE):
         return defaults

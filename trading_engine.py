@@ -691,6 +691,39 @@ class TradingEngine:
             return
 
         symbol = s["symbol"]
+
+        # v2.1: КРИТИЧНО - проверка противоположных позиций
+        # Определяем сторону сигнала
+        signal_type = s.get("type", "")
+        if any(x in signal_type for x in ["Dump → Pump", "PUMP", "bullish"]):
+            signal_side = PositionSide.LONG
+            opposite_side = PositionSide.SHORT
+        else:
+            signal_side = PositionSide.SHORT
+            opposite_side = PositionSide.LONG
+
+        # Проверяем противоположные позиции
+        for trade_id, pos in list(self.positions.items()):
+            if pos["symbol"] == symbol:
+                if pos["side"] == opposite_side:
+                    # Закрываем противоположную позицию
+                    self.log_trade(
+                        f"event=OPPOSITE_POSITION_CLOSE;symbol={symbol};"
+                        f"closing={opposite_side.value};opening={signal_side.value}"
+                    )
+                    await self._close_position_by_id(
+                        trade_id,
+                        reason=f"opposite_{signal_side.value}_signal"
+                    )
+                    await asyncio.sleep(1)  # Даём время на закрытие
+                elif pos["side"] == signal_side:
+                    # Уже есть позиция в ту же сторону
+                    self.log_trade(
+                        f"event=DUPLICATE_POSITION;symbol={symbol};"
+                        f"side={signal_side.value};already_open=true"
+                    )
+                    return  # Игнорируем дубликат
+
         signal_price = s["price"]
 
         # --- 4.5: глобальные risk‑фильтры и confidence thresholds ---

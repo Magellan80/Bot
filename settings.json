@@ -1,10 +1,12 @@
 {
-    "min_score": 40,
     "mode": "A",
-    "bot_mode": "SCREENER",
-    "strictness_level": "strict",
-    "max_concurrency": 20,
-    "orderbook_max_spread_pct": 0.5,
-    "orderbook_min_total_vol": 500.0,
-    "orderbook_depth_n": 10
+    "min_score": 45,
+    "strictness_level": "soft",
+    "reversal_requires_state": false,
+    "reversal_state_ttl_sec": 3600,
+    "reversal_min_score_bonus": 5,
+    "reversal_min_delay_bars": 1,
+    "strict_mode": false,
+    "enable_ultra_hybrid": true,
+    "bot_mode": "SCREENER"
 }

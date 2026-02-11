@@ -32,14 +32,11 @@ class BrokerBybitFutures:
         api_secret: str,
         base_url: str = "https://api.bybit.com",
         recv_window: int = 5000,
-        timeout_sec: int = 10,
     ):
         self.api_key = api_key
         self.api_secret = api_secret.encode()
         self.base_url = base_url.rstrip("/")
         self.recv_window = recv_window
-        self.timeout = aiohttp.ClientTimeout(total=timeout_sec)
-        self._session: Optional[aiohttp.ClientSession] = None
 
     # ============================
     #   ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
@@ -62,16 +59,6 @@ class BrokerBybitFutures:
         to_sign = ts + api_key + recv_window + param_str
         return hmac.new(self.api_secret, to_sign.encode(), hashlib.sha256).hexdigest()
 
-    async def _get_session(self) -> aiohttp.ClientSession:
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession(timeout=self.timeout)
-        return self._session
-
-    async def close(self) -> None:
-        if self._session and not self._session.closed:
-            await self._session.close()
-        self._session = None
-
     async def _request(
         self,
         method: str,
@@ -86,13 +73,13 @@ class BrokerBybitFutures:
         params["recvWindow"] = self.recv_window
         params["sign"] = self._sign(params)
 
-        session = await self._get_session()
-        if method.upper() == "GET":
-            async with session.get(url, params=params) as resp:
-                data = await resp.json()
-        else:
-            async with session.post(url, data=params) as resp:
-                data = await resp.json()
+        async with aiohttp.ClientSession() as session:
+            if method.upper() == "GET":
+                async with session.get(url, params=params) as resp:
+                    data = await resp.json()
+            else:
+                async with session.post(url, data=params) as resp:
+                    data = await resp.json()
 
         return data
 
@@ -157,7 +144,10 @@ class BrokerBybitFutures:
                 "reduceOnly": "false",
             }
             data = await self._request("POST", "/v5/order/create", params)
-            if data.get("retCode") != 0:
+            ret_code = data.get("retCode")
+            if ret_code != 0:
+                error_msg = data.get("retMsg", "Unknown error")
+                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
                 return None
 
             result = data.get("result", {})
@@ -179,7 +169,10 @@ class BrokerBybitFutures:
                 "reduceOnly": "true",
             }
             data = await self._request("POST", "/v5/order/create", params)
-            if data.get("retCode") != 0:
+            ret_code = data.get("retCode")
+            if ret_code != 0:
+                error_msg = data.get("retMsg", "Unknown error")
+                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
                 return None
 
             result = data.get("result", {})
@@ -208,7 +201,10 @@ class BrokerBybitFutures:
                 "reduceOnly": "true",
             }
             data = await self._request("POST", "/v5/order/create", params)
-            if data.get("retCode") != 0:
+            ret_code = data.get("retCode")
+            if ret_code != 0:
+                error_msg = data.get("retMsg", "Unknown error")
+                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
                 return None
 
             result = data.get("result", {})
@@ -220,21 +216,21 @@ class BrokerBybitFutures:
     async def place_stop_loss(self, symbol: str, side: PositionSide, size: float, price: float) -> Optional[str]:
         try:
             side_str = "Sell" if side == PositionSide.LONG else "Buy"
-            trigger_direction = 2 if side == PositionSide.LONG else 1
             params = {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side_str,
-                "orderType": "Market",
+                "orderType": "Limit",
                 "qty": str(size),
+                "price": f"{price:.4f}",
                 "timeInForce": "GoodTillCancel",
                 "reduceOnly": "true",
-                "triggerPrice": f"{price:.4f}",
-                "triggerDirection": trigger_direction,
-                "triggerBy": "LastPrice",
             }
             data = await self._request("POST", "/v5/order/create", params)
-            if data.get("retCode") != 0:
+            ret_code = data.get("retCode")
+            if ret_code != 0:
+                error_msg = data.get("retMsg", "Unknown error")
+                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
                 return None
 
             result = data.get("result", {})
@@ -330,7 +326,10 @@ class BrokerBybitFutures:
             }
 
             data = await self._request("POST", "/v5/order/create", params)
-            if data.get("retCode") != 0:
+            ret_code = data.get("retCode")
+            if ret_code != 0:
+                error_msg = data.get("retMsg", "Unknown error")
+                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
                 return None
 
             result = data.get("result", {})

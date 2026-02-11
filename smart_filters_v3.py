@@ -1259,19 +1259,19 @@ class SmartFilters:
         final_rating = float(base_rating)
 
         if confidence < 0.4:
-            final_rating *= 0.7
+            final_rating *= 0.85  # v2.1: было 0.7
         elif confidence > 0.7:
             final_rating *= 1.1
 
         market_risk = market_ctx.get("risk", 0.5)
         if market_risk > 0.7:
-            final_rating *= 0.85
+            final_rating *= 0.90  # v2.1: было 0.85
         elif market_risk < 0.4:
             final_rating *= 1.05
 
         regime = symbol_regime.get("regime", "range")
         if regime == "chaos":
-            final_rating *= 0.8
+            final_rating *= 0.90  # v2.1: было 0.8
         elif regime == "trend":
             final_rating *= 1.05
         elif regime == "squeeze":
@@ -1298,9 +1298,9 @@ class SmartFilters:
                     final_rating *= 1.03
             else:
                 if htf_abs > 2.0:
-                    final_rating *= 0.93
+                    final_rating *= 0.95  # v2.1: было 0.93
                 elif htf_abs > 1.0:
-                    final_rating *= 0.97
+                    final_rating *= 0.98  # v2.1: было 0.97
 
         # HTF-structure
         htf_structure = htf_structure_ctx.get("structure")
@@ -1324,9 +1324,9 @@ class SmartFilters:
                 elif htf_strength == 3:
                     final_rating *= 0.97
                 elif htf_strength == 4:
-                    final_rating *= 0.95
+                    final_rating *= 0.97  # v2.1: было 0.95
                 elif htf_strength >= 5:
-                    final_rating *= 0.94
+                    final_rating *= 0.96  # v2.1: было 0.94
 
         # HTF-momentum
         htf_mom_div = htf_momentum_ctx.get("divergence")

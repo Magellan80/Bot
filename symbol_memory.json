@@ -456,28 +456,44 @@
         "is_pump": false,
         "is_dump": false,
         "btc_factor": 1.1
+      },
+      {
+        "ts": 1770811801.3128057,
+        "atr_1m": 0.0009422233789279259,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      },
+      {
+        "ts": 1770818591.4027488,
+        "atr_1m": 0.0006748399123087995,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
       }
     ],
     "stats": {
-      "total_signals": 2,
+      "total_signals": 4,
       "pump_cnt": 0,
       "dump_cnt": 0,
-      "sum_atr": 0.0019276347505222803,
-      "sum_vol": 100.0,
-      "sum_btc_factor": 2.2,
-      "avg_atr": 0.0009638173752611401,
+      "sum_atr": 0.0035446980417590057,
+      "sum_vol": 200.0,
+      "sum_btc_factor": 4.35,
+      "avg_atr": 0.0008861745104397514,
       "avg_volatility": 50.0,
-      "avg_btc_factor": 1.1
+      "avg_btc_factor": 1.0875
     },
     "profile": {
       "pump_probability": 0.0,
       "dump_probability": 0.0,
-      "avg_atr": 0.0009638173752611401,
+      "avg_atr": 0.0008861745104397514,
       "avg_volatility": 50.0,
-      "btc_correlation_proxy": 1.1,
+      "btc_correlation_proxy": 1.0875,
       "regime": "chaotic"
     },
-    "updated_ts": 1770629354.4361537
+    "updated_ts": 1770818591.4027488
   },
   "IPUSDT": {
     "history": [
@@ -584,28 +600,36 @@
         "is_pump": false,
         "is_dump": false,
         "btc_factor": 1.0
+      },
+      {
+        "ts": 1770818514.200633,
+        "atr_1m": 9.209615926800075e-05,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
       }
     ],
     "stats": {
-      "total_signals": 1,
+      "total_signals": 2,
       "pump_cnt": 0,
       "dump_cnt": 0,
-      "sum_atr": 5.586699718274985e-05,
-      "sum_vol": 50.0,
-      "sum_btc_factor": 1.0,
-      "avg_atr": 5.586699718274985e-05,
+      "sum_atr": 0.0001479631564507506,
+      "sum_vol": 100.0,
+      "sum_btc_factor": 2.15,
+      "avg_atr": 7.39815782253753e-05,
       "avg_volatility": 50.0,
-      "avg_btc_factor": 1.0
+      "avg_btc_factor": 1.075
     },
     "profile": {
       "pump_probability": 0.0,
       "dump_probability": 0.0,
-      "avg_atr": 5.586699718274985e-05,
+      "avg_atr": 7.39815782253753e-05,
       "avg_volatility": 50.0,
-      "btc_correlation_proxy": 1.0,
+      "btc_correlation_proxy": 1.075,
       "regime": "chaotic"
     },
-    "updated_ts": 1770629170.5636978
+    "updated_ts": 1770818514.200633
   },
   "RESOLVUSDT": {
     "history": [
@@ -638,5 +662,452 @@
       "regime": "chaotic"
     },
     "updated_ts": 1770629532.5605025
+  },
+  "FHEUSDT": {
+    "history": [
+      {
+        "ts": 1770717952.3925593,
+        "atr_1m": 0.0008211427481394941,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.1
+      },
+      {
+        "ts": 1770809545.687677,
+        "atr_1m": 0.0037114519880179,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 2,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.004532594736157394,
+      "sum_vol": 100.0,
+      "sum_btc_factor": 2.1,
+      "avg_atr": 0.002266297368078697,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.05
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.002266297368078697,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.05,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770809545.687677
+  },
+  "MYXUSDT": {
+    "history": [
+      {
+        "ts": 1770808119.6391203,
+        "atr_1m": 0.022377625086827394,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.022377625086827394,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.15,
+      "avg_atr": 0.022377625086827394,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.15
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.022377625086827394,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.15,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770808119.6391203
+  },
+  "MONUSDT": {
+    "history": [
+      {
+        "ts": 1770811126.3694804,
+        "atr_1m": 4.003875266782895e-05,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      },
+      {
+        "ts": 1770821111.791247,
+        "atr_1m": 7.295415435482594e-05,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 2,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.00011299290702265489,
+      "sum_vol": 100.0,
+      "sum_btc_factor": 2.0,
+      "avg_atr": 5.6496453511327446e-05,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.0
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 5.6496453511327446e-05,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.0,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770821111.791247
+  },
+  "BERAUSDT": {
+    "history": [
+      {
+        "ts": 1770812551.7661264,
+        "atr_1m": 0.0022506169651595005,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      },
+      {
+        "ts": 1770812869.072261,
+        "atr_1m": 0.0024489743813753315,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      }
+    ],
+    "stats": {
+      "total_signals": 2,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.004699591346534832,
+      "sum_vol": 100.0,
+      "sum_btc_factor": 2.3,
+      "avg_atr": 0.002349795673267416,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.15
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.002349795673267416,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.15,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770812869.072261
+  },
+  "NILUSDT": {
+    "history": [
+      {
+        "ts": 1770813034.696321,
+        "atr_1m": 0.0007834282913836147,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.0007834282913836147,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.15,
+      "avg_atr": 0.0007834282913836147,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.15
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.0007834282913836147,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.15,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770813034.696321
+  },
+  "UNIUSDT": {
+    "history": [
+      {
+        "ts": 1770818432.1429443,
+        "atr_1m": 0.03415157833635266,
+        "trend_score": 50,
+        "is_pump": true,
+        "is_dump": false,
+        "btc_factor": 1.15
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 1,
+      "sum_atr": 0.03415157833635266,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.15,
+      "avg_atr": 0.03415157833635266,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.15
+    },
+    "profile": {
+      "pump_probability": 1.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.03415157833635266,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.15,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770818432.1429443
+  },
+  "RIVERUSDT": {
+    "history": [
+      {
+        "ts": 1770818864.6151702,
+        "atr_1m": 0.17205162223380746,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.17205162223380746,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.15,
+      "avg_atr": 0.17205162223380746,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.15
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.17205162223380746,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.15,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770818864.6151702
+  },
+  "SONICUSDT": {
+    "history": [
+      {
+        "ts": 1770818941.9758713,
+        "atr_1m": 0.0003694619247068057,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.15
+      },
+      {
+        "ts": 1770822570.6866615,
+        "atr_1m": 0.00023758946624572816,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 2,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.0006070513909525339,
+      "sum_vol": 100.0,
+      "sum_btc_factor": 2.15,
+      "avg_atr": 0.00030352569547626693,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.075
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.00030352569547626693,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.075,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770822570.6866615
+  },
+  "WHITEWHALEUSDT": {
+    "history": [
+      {
+        "ts": 1770819739.0126824,
+        "atr_1m": 0.0007324693518475801,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.0007324693518475801,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.0,
+      "avg_atr": 0.0007324693518475801,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.0
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.0007324693518475801,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.0,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770819739.0126824
+  },
+  "FARTCOINUSDT": {
+    "history": [
+      {
+        "ts": 1770820938.2785144,
+        "atr_1m": 0.0007182075609521199,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.0007182075609521199,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.0,
+      "avg_atr": 0.0007182075609521199,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.0
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.0007182075609521199,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.0,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770820938.2785144
+  },
+  "VIRTUALUSDT": {
+    "history": [
+      {
+        "ts": 1770821111.7672627,
+        "atr_1m": 0.002135555947915262,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.0
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.002135555947915262,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.0,
+      "avg_atr": 0.002135555947915262,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.0
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.002135555947915262,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.0,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770821111.7672627
+  },
+  "PIPPINUSDT": {
+    "history": [
+      {
+        "ts": 1770821594.8903747,
+        "atr_1m": 0.003921416309404093,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.05
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.003921416309404093,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.05,
+      "avg_atr": 0.003921416309404093,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.05
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.003921416309404093,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.05,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770821594.8903747
+  },
+  "XPLUSDT": {
+    "history": [
+      {
+        "ts": 1770823895.198549,
+        "atr_1m": 0.00029232756940325604,
+        "trend_score": 50,
+        "is_pump": false,
+        "is_dump": false,
+        "btc_factor": 1.05
+      }
+    ],
+    "stats": {
+      "total_signals": 1,
+      "pump_cnt": 0,
+      "dump_cnt": 0,
+      "sum_atr": 0.00029232756940325604,
+      "sum_vol": 50.0,
+      "sum_btc_factor": 1.05,
+      "avg_atr": 0.00029232756940325604,
+      "avg_volatility": 50.0,
+      "avg_btc_factor": 1.05
+    },
+    "profile": {
+      "pump_probability": 0.0,
+      "dump_probability": 0.0,
+      "avg_atr": 0.00029232756940325604,
+      "avg_volatility": 50.0,
+      "btc_correlation_proxy": 1.05,
+      "regime": "chaotic"
+    },
+    "updated_ts": 1770823895.198549
   }
 }

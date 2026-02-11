@@ -12,8 +12,22 @@ def _load_raw() -> Dict[str, Any]:
         return {}
     try:
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
+            data = json.load(f)
+            # v2.1: Валидация что это dict
+            if not isinstance(data, dict):
+                print(f"⚠️ [SYMBOL_MEMORY] Invalid data type in {MEMORY_FILE}, resetting")
+                return {}
+            return data
+    except json.JSONDecodeError as e:
+        print(f"⚠️ [SYMBOL_MEMORY] Corrupted JSON in {MEMORY_FILE}: {e}")
+        # Создаём бэкап
+        backup_file = f"{MEMORY_FILE}.corrupt.{int(time.time())}"
+        import shutil
+        shutil.copy(MEMORY_FILE, backup_file)
+        print(f"⚠️ [SYMBOL_MEMORY] Backup saved to {backup_file}")
+        return {}
+    except Exception as e:
+        print(f"⚠️ [SYMBOL_MEMORY] Error loading {MEMORY_FILE}: {e}")
         return {}
 
 
