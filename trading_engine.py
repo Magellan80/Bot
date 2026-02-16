@@ -103,6 +103,7 @@ class TradingEngine:
     # 4.2: параметры умного трейлинга
     PARTIAL_BE_MFE_R = 1.2
     PARTIAL_BE_LOCK_R = 0.3
+    POST_TP2_TRAIL_RATIO = 0.7
     MFE_AGGRESSIVE_R = 3.0
     LOCK_IN_MIN_R_AFTER_TP2 = 1.0
     LAST_PUSH_NEAR_TP3_PCT = 0.3
@@ -905,145 +906,171 @@ class TradingEngine:
     # ---------------------------------------------------------
 
     async def open_position(self, symbol: str, s: dict, engine_mode_cfg: Dict[str, Any]):
-        signal_type = s["type"]
-        price = s["price"]
 
-        side = self.get_signal_direction(signal_type)
-        if side is None:
-            return
+        # ==========================================
+        # ЗАЩИТА ОТ ДВОЙНОГО ВХОДА
+        # ==========================================
 
-        closes = s.get("meta_closes") or []
-        highs = s.get("meta_highs") or []
-        lows = s.get("meta_lows") or []
+        existing = self.positions.get(symbol)
 
-        if not closes or not highs or not lows:
-            return
+        if existing:
+            if existing.get("state") in ("opening", "open", "closing"):
+                print(f"[ENGINE] Skip open — position already exists: {symbol}")
+                return
 
-        atr = self.compute_atr(highs, lows, closes, period=14)
-        if atr is None or atr <= 0:
-            return
+        # временно блокируем символ
+        self.positions[symbol] = {"state": "opening"}
 
-        atr_mult = engine_mode_cfg.get("atr_mult", 2.0)
-        tp1_r = engine_mode_cfg.get("tp1_r", 1.0)
-        tp2_mult = engine_mode_cfg.get("tp2_mult", 2.0)
-        tp3_mult = engine_mode_cfg.get("tp3_mult", 3.0)
+        try:
+            signal_type = s["type"]
+            price = s["price"]
 
-        stop_distance = atr * atr_mult
+            side = self.get_signal_direction(signal_type)
+            if side is None:
+                raise ValueError("Invalid signal direction")
 
-        # --- 4.5: адаптивный размер позиции с учётом сигнала ---
-        size = await self.compute_position_size(stop_distance, s)
-        if size <= 0:
-            return
+            closes = s.get("meta_closes") or []
+            highs = s.get("meta_highs") or []
+            lows = s.get("meta_lows") or []
 
-        # дополнительная мягкая шкала по confidence
-        confidence = float(s.get("confidence", 1.0) or 1.0)
-        confidence = max(0.0, min(confidence, 1.0))
-        if self.MIN_CONFIDENCE_HARD <= confidence < self.MID_CONFIDENCE:
-            size *= 0.5
+            if not closes or not highs or not lows:
+                raise ValueError("Missing candle data")
 
-        # нормализация размера под требования биржи
-        size = await self._normalize_order_size(symbol, size, price)
-        if size <= 0:
+            atr = self.compute_atr(highs, lows, closes, period=14)
+            if atr is None or atr <= 0:
+                raise ValueError("ATR invalid")
+
+            atr_mult = engine_mode_cfg.get("atr_mult", 2.0)
+            tp1_r = engine_mode_cfg.get("tp1_r", 1.0)
+            tp2_mult = engine_mode_cfg.get("tp2_mult", 2.0)
+            tp3_mult = engine_mode_cfg.get("tp3_mult", 3.0)
+
+            stop_distance = atr * atr_mult
+
+            # --- адаптивный размер позиции ---
+            size = await self.compute_position_size(stop_distance, s)
+            if size <= 0:
+                raise ValueError("Invalid position size")
+
+            confidence = float(s.get("confidence", 1.0) or 1.0)
+            confidence = max(0.0, min(confidence, 1.0))
+            if self.MIN_CONFIDENCE_HARD <= confidence < self.MID_CONFIDENCE:
+                size *= 0.5
+
+            size = await self._normalize_order_size(symbol, size, price)
+            if size <= 0:
+                raise ValueError("Size too small after normalization")
+
+            can_open = await self._check_exposure_limit(symbol, price, size)
+            if not can_open:
+                raise ValueError("Exposure limit exceeded")
+
+            trade_id = f"{symbol}-{int(time.time())}"
+
+            # === ОТКРЫВАЕМ МАРКЕТ ОРДЕР ===
+            try:
+                order_id = await self.broker.open_market_order(symbol, side, size)
+            except Exception:
+                self._register_rest_error("open_position:open_market_order")
+                raise
+
+            if not order_id:
+                raise ValueError("Order ID is None")
+
+            # === Расчет SL/TP ===
+            if side == PositionSide.LONG:
+                sl_price = price - stop_distance
+                tp1_price = price + stop_distance * tp1_r
+                tp2_price = price + stop_distance * tp2_mult
+                tp3_price = price + stop_distance * tp3_mult
+            else:
+                sl_price = price + stop_distance
+                tp1_price = price - stop_distance * tp1_r
+                tp2_price = price - stop_distance * tp2_mult
+                tp3_price = price - stop_distance * tp3_mult
+
+            # === Ставим SL ===
+            try:
+                sl_id = await self.broker.place_stop_loss_market(symbol, side, size, sl_price)
+            except Exception:
+                self._register_rest_error("open_position:place_sl")
+                sl_id = None
+
+            # === TP ордера ===
+            tp1_size, tp2_size, tp3_size = await self._split_tp_sizes(symbol, size, price)
+
+            tp1_id = tp2_id = tp3_id = None
+            try:
+                if tp1_size > 0:
+                    tp1_id = await self.broker.place_take_profit(symbol, side, tp1_size, tp1_price)
+                if tp2_size > 0:
+                    tp2_id = await self.broker.place_take_profit(symbol, side, tp2_size, tp2_price)
+                if tp3_size > 0:
+                    tp3_id = await self.broker.place_take_profit(symbol, side, tp3_size, tp3_price)
+            except Exception:
+                self._register_rest_error("open_position:place_tp")
+
+            # ==========================================
+            # ФИКСИРУЕМ ПОЛНОЦЕННУЮ ПОЗИЦИЮ
+            # ==========================================
+
+            self.positions[symbol] = {
+                "state": "open",
+                "trade_id": trade_id,
+                "symbol": symbol,
+                "side": side,
+                "entry": price,
+                "size_total": size,
+                "size_remaining": size,
+                "sl": sl_price,
+                "tp1": tp1_price,
+                "tp2": tp2_price,
+                "tp3": tp3_price,
+                "sl_id": sl_id,
+                "tp1_id": tp1_id,
+                "tp2_id": tp2_id,
+                "tp3_id": tp3_id,
+                "tp1_size": tp1_size,
+                "tp2_size": tp2_size,
+                "tp3_size": tp3_size,
+                "mode": engine_mode_cfg,
+                "opened_ts": time.time(),
+                "status": "OPEN",
+                "signal_type": signal_type,
+                "atr": atr,
+                "stop_distance": stop_distance,
+                "tp1_hit": False,
+                "tp2_hit": False,
+                "tp3_hit": False,
+                "trailing_active": False,
+                "mfe": 0.0,
+                "mae": 0.0,
+                "mfe_price": price,
+                "price_history": [price],
+                "realized_r": 0.0,
+                "last_sl_update_ts": 0.0,
+                "last_trailing_check_ts": 0.0,
+                "trend_score": s.get("trend_score"),
+                "btc_regime": s.get("btc_regime"),
+                "symbol_regime": s.get("symbol_regime"),
+                "volatility_score": s.get("volatility_score"),
+                "structure_score": s.get("structure_score"),
+                "liquidity_score": s.get("liquidity_score"),
+                "pattern_quality": s.get("pattern_quality"),
+            }
+
             self.log_trade(
-                f"event=SIZE_TOO_SMALL;symbol={symbol};price={price:.4f};"
-                f"stop_distance={stop_distance:.6f}"
+                f"id={trade_id};event=OPEN;symbol={symbol};side={side.value};entry={price:.4f};"
+                f"sl={sl_price:.4f};tp1={tp1_price:.4f};tp2={tp2_price:.4f};tp3={tp3_price:.4f};"
+                f"size_total={size:.6f};mode={engine_mode_cfg.get('name', 'Unknown')};atr={atr:.4f};"
+                f"confidence={confidence:.3f}"
             )
-            return
 
-        # проверка лимита экспозиции
-        can_open = await self._check_exposure_limit(symbol, price, size)
-        if not can_open:
-            return
-
-        trade_id = f"{symbol}-{int(time.time())}"
-
-        try:
-            order_id = await self.broker.open_market_order(symbol, side, size)
         except Exception as e:
-            self._register_rest_error("open_position:open_market_order")
+            print(f"[ENGINE ERROR] open_position: {e}")
+            self.positions.pop(symbol, None)
             return
 
-        if not order_id:
-            return
-
-        if side == PositionSide.LONG:
-            sl_price = price - stop_distance
-            tp1_price = price + stop_distance * tp1_r
-            tp2_price = price + stop_distance * tp2_mult
-            tp3_price = price + stop_distance * tp3_mult
-        else:
-            sl_price = price + stop_distance
-            tp1_price = price - stop_distance * tp1_r
-            tp2_price = price - stop_distance * tp2_mult
-            tp3_price = price - stop_distance * tp3_mult
-
-        try:
-            sl_id = await self.broker.place_stop_loss_market(symbol, side, size, sl_price)
-        except Exception as e:
-            self._register_rest_error("open_position:place_sl")
-            sl_id = None
-
-        tp1_size, tp2_size, tp3_size = await self._split_tp_sizes(symbol, size, price)
-
-        tp1_id = tp2_id = tp3_id = None
-        try:
-            if tp1_size > 0:
-                tp1_id = await self.broker.place_take_profit(symbol, side, tp1_size, tp1_price)
-            if tp2_size > 0:
-                tp2_id = await self.broker.place_take_profit(symbol, side, tp2_size, tp2_price)
-            if tp3_size > 0:
-                tp3_id = await self.broker.place_take_profit(symbol, side, tp3_size, tp3_price)
-        except Exception as e:
-            self._register_rest_error("open_position:place_tp")
-
-        self.positions[symbol] = {
-            "trade_id": trade_id,
-            "symbol": symbol,
-            "side": side,
-            "entry": price,
-            "size_total": size,
-            "size_remaining": size,
-            "sl": sl_price,
-            "tp1": tp1_price,
-            "tp2": tp2_price,
-            "tp3": tp3_price,
-            "sl_id": sl_id,
-            "tp1_id": tp1_id,
-            "tp2_id": tp2_id,
-            "tp3_id": tp3_id,
-            "tp1_size": tp1_size,
-            "tp2_size": tp2_size,
-            "tp3_size": tp3_size,
-            "mode": engine_mode_cfg,
-            "opened_ts": time.time(),
-            "status": "OPEN",
-            "signal_type": signal_type,
-            "atr": atr,
-            "stop_distance": stop_distance,
-            "tp1_hit": False,
-            "tp2_hit": False,
-            "tp3_hit": False,
-            "trailing_active": False,
-            "mfe": 0.0,
-            "mae": 0.0,
-            "price_history": [price],
-
-            # --- факторы для execution feedback ---
-            "trend_score": s.get("trend_score"),
-            "btc_regime": s.get("btc_regime"),
-            "symbol_regime": s.get("symbol_regime"),
-            "volatility_score": s.get("volatility_score"),
-            "structure_score": s.get("structure_score"),
-            "liquidity_score": s.get("liquidity_score"),
-            "pattern_quality": s.get("pattern_quality"),
-        }
-
-        self.log_trade(
-            f"id={trade_id};event=OPEN;symbol={symbol};side={side.value};entry={price:.4f};"
-            f"sl={sl_price:.4f};tp1={tp1_price:.4f};tp2={tp2_price:.4f};tp3={tp3_price:.4f};"
-            f"size_total={size:.6f};mode={engine_mode_cfg.get('name', 'Unknown')};atr={atr:.4f};"
-            f"confidence={float(s.get('confidence', 1.0) or 1.0):.3f};market_risk={float(s.get('market_risk', 0.0) or 0.0):.3f}"
-        )
 
     # ---------------------------------------------------------
     # СУЩЕСТВУЮЩАЯ ПОЗИЦИЯ
@@ -1055,7 +1082,12 @@ class TradingEngine:
             return
 
         current_side = pos["side"]
-        new_side = self.get_signal_direction(s["type"])
+        signal_type = s.get("type")
+        if not signal_type:
+            return
+
+        new_side = self.get_signal_direction(signal_type)
+
         if new_side is None:
             return
 
@@ -1089,6 +1121,59 @@ class TradingEngine:
                     return p
 
         return None
+
+    # ---------------------------------------------------------
+    # SAFE MOVE STOP (v3)
+    # ---------------------------------------------------------
+
+    async def _move_stop(self, symbol: str, pos: Dict[str, Any], new_sl: float):
+
+        side: PositionSide = pos["side"]
+        trade_id = pos["trade_id"]
+        size_remaining = pos.get("size_remaining", 0.0)
+
+        if size_remaining <= 0:
+            return
+
+        current_sl = pos.get("sl")
+
+        # защита от ухудшения стопа
+        if current_sl is not None:
+            if side == PositionSide.LONG and new_sl <= current_sl:
+                return
+            if side == PositionSide.SHORT and new_sl >= current_sl:
+                return
+
+        # отменяем старый SL если есть
+        old_sl_id = pos.get("sl_id")
+        if old_sl_id:
+            try:
+                await self.broker.cancel_order(symbol, old_sl_id)
+            except Exception:
+                self._register_rest_error("move_stop:cancel_sl")
+
+        # ставим новый SL
+        try:
+            new_sl_id = await self.broker.place_stop_loss_market(
+                symbol,
+                side,
+                size_remaining,
+                new_sl
+            )
+        except Exception:
+            self._register_rest_error("move_stop:place_sl")
+            return
+
+        if new_sl_id:
+            pos["sl"] = new_sl
+            pos["sl_id"] = new_sl_id
+
+            self.log_trade(
+                f"id={trade_id};event=SL_MOVED;"
+                f"symbol={symbol};new_sl={new_sl:.4f};"
+                f"size={size_remaining:.6f}"
+            )
+
 
     # ---------------------------------------------------------
     # PRICE UPDATE / КОМБИНИРОВАННЫЙ ТРЕЙЛИНГ 4.2
@@ -1128,6 +1213,14 @@ class TradingEngine:
         pos["mfe"] = max(pos["mfe"], pnl_pct)
         pos["mae"] = min(pos["mae"], pnl_pct)
 
+        # обновляем экстремальную цену для trailing
+        if side == PositionSide.LONG:
+            if price > pos.get("mfe_price", entry):
+                pos["mfe_price"] = price
+        else:
+            if price < pos.get("mfe_price", entry):
+                pos["mfe_price"] = price
+
         r_pct = (stop_distance / entry * 100) if entry > 0 and stop_distance > 0 else 0.0
 
         # размеры для TP
@@ -1138,24 +1231,34 @@ class TradingEngine:
         # ---------------- Динамический ранний BE (4.2) ----------------
         if not pos["tp1_hit"] and r_pct > 0:
             if pos["mfe"] >= self.PARTIAL_BE_MFE_R * r_pct:
+
                 if side == PositionSide.LONG:
                     target_be = entry + stop_distance * self.PARTIAL_BE_LOCK_R
-                    if target_be > pos["sl"]:
-                        pos["sl"] = target_be
-                        self.log_trade(
-                            f"id={trade_id};event=EARLY_BE;symbol={symbol};side={side.value};"
-                            f"price={price:.4f};sl={pos['sl']:.4f};mfe={pos['mfe']:.2f}"
-                        )
                 else:
                     target_be = entry - stop_distance * self.PARTIAL_BE_LOCK_R
-                    if pos["sl"] is None or target_be < pos["sl"]:
-                        pos["sl"] = target_be
-                        self.log_trade(
-                            f"id={trade_id};event=EARLY_BE;symbol={symbol};side={side.value};"
-                            f"price={price:.4f};sl={pos['sl']:.4f};mfe={pos['mfe']:.2f}"
-                        )
 
-        # ---------------- TP‑логика ----------------
+                current_sl = pos.get("sl")
+                should_move = False
+
+                if current_sl is None:
+                    should_move = True
+                else:
+                    if side == PositionSide.LONG and target_be > current_sl:
+                        should_move = True
+                    if side == PositionSide.SHORT and target_be < current_sl:
+                        should_move = True
+
+                if should_move and pos.get("size_remaining", 0) > 0:
+                    await self._move_stop(symbol, pos, target_be)
+
+                    self.log_trade(
+                        f"id={trade_id};event=EARLY_BE;"
+                        f"symbol={symbol};side={side.value};"
+                        f"price={price:.4f};new_sl={target_be:.4f};mfe={pos['mfe']:.2f}"
+                    )
+
+
+        # ---------------- TP-логика ----------------
 
         # TP1
         if not pos["tp1_hit"]:
@@ -1169,12 +1272,14 @@ class TradingEngine:
                 else:
                     be_price = entry * (1 - self.BE_OFFSET_SHORT_PCT)
 
-                pos["sl"] = be_price
+                if pos.get("size_remaining", 0) > 0:
+                    await self._move_stop(symbol, pos, be_price)
 
                 self.log_trade(
                     f"id={trade_id};event=TP1;symbol={symbol};side={side.value};price={price:.4f};"
-                    f"remaining={pos['size_remaining']:.6f};sl={pos['sl']:.4f}"
+                    f"remaining={pos['size_remaining']:.6f};new_sl={be_price:.4f}"
                 )
+
 
         # TP2
         if pos["tp1_hit"] and not pos["tp2_hit"]:
@@ -1186,6 +1291,32 @@ class TradingEngine:
                     f"id={trade_id};event=TP2;symbol={symbol};side={side.value};price={price:.4f};"
                     f"remaining={pos['size_remaining']:.6f}"
                 )
+
+
+        # ---------------- TRAILING AFTER TP2 ----------------
+        if pos.get("tp2_hit") and pos.get("size_remaining", 0) > 0:
+
+            current_sl = pos.get("sl")
+            mfe_price = pos.get("mfe_price")
+
+            if mfe_price:
+
+                if side == PositionSide.LONG:
+                    profit_move = mfe_price - entry
+                    if profit_move > 0:
+                        new_sl = entry + profit_move * self.POST_TP2_TRAIL_RATIO
+
+                        if current_sl is None or new_sl > current_sl:
+                            await self._move_stop(symbol, pos, new_sl)
+
+                else:
+                    profit_move = entry - mfe_price
+                    if profit_move > 0:
+                        new_sl = entry - profit_move * self.POST_TP2_TRAIL_RATIO
+
+                        if current_sl is None or new_sl < current_sl:
+                            await self._move_stop(symbol, pos, new_sl)
+
 
         # TP3
         if pos["tp2_hit"] and not pos["tp3_hit"]:
@@ -1200,14 +1331,31 @@ class TradingEngine:
                 await self.close_position(symbol, reason="TP3_LOGICAL")
                 return
 
+
     # ---------------------------------------------------------
     # ЗАКРЫТИЕ ПОЗИЦИИ
     # ---------------------------------------------------------
 
     async def close_position(self, symbol: str, reason: str = "MANUAL"):
+
         pos = self.positions.get(symbol)
         if not pos:
             return
+
+        # ==========================================
+        # ЗАЩИТА ОТ ДВОЙНОГО ЗАКРЫТИЯ
+        # ==========================================
+
+        # если уже логически закрыта
+        if pos.get("status") == "CLOSED":
+            return
+
+        # если уже в процессе закрытия
+        if pos.get("state") in ("closing", "closed"):
+            return
+
+        # блокируем повторный вход
+        pos["state"] = "closing"
 
         side: PositionSide = pos["side"]
         size_remaining = pos.get("size_remaining", 0.0)
@@ -1215,81 +1363,95 @@ class TradingEngine:
         entry = pos["entry"]
         stop_distance = float(pos.get("stop_distance") or 0.0)
 
-        # --- получаем последнюю цену ---
         try:
-            last_price = await self.broker.get_last_price(symbol)
-        except Exception as e:
-            self._register_rest_error("close_position:get_last_price")
-            last_price = None
-
-        # --- закрываем остаток позиции ---
-        if size_remaining > 0:
+            # --- получаем последнюю цену ---
             try:
-                await self.broker.close_market_order(symbol, side, size_remaining)
-            except Exception as e:
-                self._register_rest_error("close_position:close_market_order")
+                last_price = await self.broker.get_last_price(symbol)
+            except Exception:
+                self._register_rest_error("close_position:get_last_price")
+                last_price = None
 
-        # --- отменяем SL/TP ---
-        for key in ("sl_id", "tp1_id", "tp2_id", "tp3_id"):
-            oid = pos.get(key)
-            if oid:
+            # --- закрываем остаток ---
+            if size_remaining > 0:
                 try:
-                    await self.broker.cancel_order(symbol, oid)
-                except Exception as e:
-                    self._register_rest_error(f"close_position:cancel_{key}")
+                    await self.broker.close_market_order(symbol, side, size_remaining)
+                except Exception:
+                    self._register_rest_error("close_position:close_market_order")
 
-        # --- считаем PnL ---
-        if last_price is not None and entry > 0:
-            if side == PositionSide.LONG:
-                pnl_pct = (last_price - entry) / entry * 100
-                pnl_r = (last_price - entry) / stop_distance if stop_distance > 0 else 0.0
+            # --- отменяем SL/TP ---
+            for key in ("sl_id", "tp1_id", "tp2_id", "tp3_id"):
+                oid = pos.get(key)
+                if oid:
+                    try:
+                        await self.broker.cancel_order(symbol, oid)
+                    except Exception:
+                        self._register_rest_error(f"close_position:cancel_{key}")
+
+            # --- расчет PnL ---
+            if last_price is not None and entry > 0:
+                if side == PositionSide.LONG:
+                    pnl_pct = (last_price - entry) / entry * 100
+                    pnl_r = (last_price - entry) / stop_distance if stop_distance > 0 else 0.0
+                else:
+                    pnl_pct = (entry - last_price) / entry * 100
+                    pnl_r = (entry - last_price) / stop_distance if stop_distance > 0 else 0.0
             else:
-                pnl_pct = (entry - last_price) / entry * 100
-                pnl_r = (entry - last_price) / stop_distance if stop_distance > 0 else 0.0
-        else:
-            pnl_pct = 0.0
-            pnl_r = 0.0
+                pnl_pct = 0.0
+                pnl_r = 0.0
 
-        # --- определяем, был ли стоп ---
-        stopped_out = reason.upper().startswith("SL")
+            stopped_out = reason.upper().startswith("SL")
 
-        # --- отправляем feedback в SmartFilters ---
-        try:
-            smartfilters.register_execution_feedback(
-                trend_score=pos.get("trend_score"),
-                btc_regime=pos.get("btc_regime"),
-                symbol_regime=pos.get("symbol_regime"),
-                volatility_score=pos.get("volatility_score"),
-                structure_score=pos.get("structure_score"),
-                liquidity_score=pos.get("liquidity_score"),
-                pattern_quality=pos.get("pattern_quality"),
-                pnl_r=float(pnl_r),
-                stopped_out=bool(stopped_out),
+            # --- execution feedback ---
+            try:
+                smartfilters.register_execution_feedback(
+                    trend_score=pos.get("trend_score"),
+                    btc_regime=pos.get("btc_regime"),
+                    symbol_regime=pos.get("symbol_regime"),
+                    volatility_score=pos.get("volatility_score"),
+                    structure_score=pos.get("structure_score"),
+                    liquidity_score=pos.get("liquidity_score"),
+                    pattern_quality=pos.get("pattern_quality"),
+                    pnl_r=float(pnl_r),
+                    stopped_out=bool(stopped_out),
+                )
+            except Exception as e:
+                self._register_internal_error(
+                    f"close_position:feedback_error:{repr(e)}"
+                )
+
+            # --- лог ---
+            self.log_trade(
+                f"id={trade_id};event=CLOSE;symbol={symbol};side={side.value};reason={reason};"
+                f"entry={entry:.4f};last_price={last_price if last_price is not None else 0.0:.4f};"
+                f"pnl_pct={pnl_pct:.2f};pnl_r={pnl_r:.2f}"
             )
+
+            # ==========================================
+            # ДВУХФАЗНОЕ ЗАКРЫТИЕ (Production-safe)
+            # ==========================================
+
+            pos["state"] = "closed"
+            pos["status"] = "CLOSED"
+            pos["closed_ts"] = time.time()
+            pos["size_remaining"] = 0.0
+
         except Exception as e:
-            self._register_internal_error(f"close_position:feedback_error:{repr(e)}")
+            # если что-то пошло не так — возвращаем позицию в OPEN
+            pos["state"] = "open"
+            self._register_internal_error(f"close_position:fatal:{repr(e)}")
+            return
 
-        # --- удаляем позицию ---
-        self.positions.pop(symbol, None)
-
-        # --- лог ---
-        self.log_trade(
-            f"id={trade_id};event=CLOSE;symbol={symbol};side={side.value};reason={reason};"
-            f"entry={entry:.4f};last_price={last_price if last_price is not None else 0.0:.4f};"
-            f"pnl_pct={pnl_pct:.2f};pnl_r={pnl_r:.2f}"
-        )
 
     # ---------------------------------------------------------
     # SYNC + АВТОВОССТАНОВЛЕНИЕ SL/TP
     # ---------------------------------------------------------
 
     async def sync_with_exchange(self):
-        # heartbeat по sync-циклу
         self._register_heartbeat("sync")
 
         try:
             real_positions = await self.broker.get_open_positions()
-        except Exception as e:
+        except Exception:
             self._register_rest_error("sync:get_open_positions")
             return
 
@@ -1297,27 +1459,47 @@ class TradingEngine:
 
         try:
             all_orders = await self.broker.get_open_orders()
-        except Exception as e:
+        except Exception:
             self._register_rest_error("sync:get_open_orders")
             all_orders = []
 
         orders_by_symbol: Dict[str, List[Dict[str, Any]]] = {}
         for o in all_orders:
             sym = o.get("symbol")
-            if not sym:
-                continue
-            orders_by_symbol.setdefault(sym, []).append(o)
+            if sym:
+                orders_by_symbol.setdefault(sym, []).append(o)
 
+        # -------------------------------------------------
+        # CONFIRM CLOSED POSITIONS
+        # -------------------------------------------------
         for symbol in list(self.positions.keys()):
-            if symbol not in real_by_symbol:
-                pos = self.positions.pop(symbol)
-                trade_id = pos["trade_id"]
-                self.log_trade(
-                    f"id={trade_id};event=SYNC_CLOSE;symbol={symbol};reason=NO_EXCHANGE_POSITION"
-                )
 
+            pos = self.positions[symbol]
+
+            if symbol not in real_by_symbol:
+
+                if pos.get("status") == "CLOSED":
+
+                    trade_id = pos["trade_id"]
+
+                    self.positions.pop(symbol, None)
+
+                    self.log_trade(
+                        f"id={trade_id};event=SYNC_CONFIRMED_CLOSE;symbol={symbol}"
+                    )
+
+                else:
+                    self.log_trade(
+                        f"id={pos['trade_id']};event=SYNC_POSITION_LOST;symbol={symbol}"
+                    )
+
+        # -------------------------------------------------
+        # RESTORE missing exchange positions
+        # -------------------------------------------------
         for symbol, rp in real_by_symbol.items():
+
             if symbol not in self.positions:
+
                 side_str = rp.get("side", "").upper()
                 side = PositionSide.LONG if side_str == "BUY" else PositionSide.SHORT
                 size = float(rp.get("size", 0) or 0)
@@ -1355,7 +1537,8 @@ class TradingEngine:
                     "trailing_active": False,
                     "mfe": 0.0,
                     "mae": 0.0,
-                    "price_history": [entry],
+                    "mfe_price": entry,   
+                    "price_history": [entry],                    
                 }
 
                 self.log_trade(
@@ -1363,24 +1546,38 @@ class TradingEngine:
                     f"entry={entry:.4f};size_total={size:.6f}"
                 )
 
+        # -------------------------------------------------
+        # CHECK SL/TP consistency
+        # -------------------------------------------------
         for symbol, pos in list(self.positions.items()):
-            sym_orders = orders_by_symbol.get(symbol, [])
-            sl_order, tp_orders = self._classify_orders_for_symbol(symbol, pos, sym_orders)
 
-            if pos.get("sl_id") and (not sl_order or sl_order.get("orderId") != pos["sl_id"]):
+            if pos.get("status") == "CLOSED":
+                continue
+
+            sym_orders = orders_by_symbol.get(symbol, [])
+            sl_order, tp_orders = self._classify_orders_for_symbol(
+                symbol, pos, sym_orders
+            )
+
+            if pos.get("sl_id") and (
+                not sl_order or sl_order.get("orderId") != pos["sl_id"]
+            ):
                 self.log_trade(
-                    f"id={pos['trade_id']};event=SYNC_SL_MISSING;symbol={symbol};old_sl_id={pos['sl_id']}"
+                    f"id={pos['trade_id']};event=SYNC_SL_MISSING;symbol={symbol}"
                 )
                 pos["sl_id"] = None
                 await self._restore_sl(symbol, pos)
 
             for key, level in (("tp1_id", "tp1"), ("tp2_id", "tp2"), ("tp3_id", "tp3")):
-                if pos.get(key) and not any(o.get("orderId") == pos[key] for o in tp_orders):
+                if pos.get(key) and not any(
+                    o.get("orderId") == pos[key] for o in tp_orders
+                ):
                     self.log_trade(
                         f"id={pos['trade_id']};event=SYNC_TP_MISSING;symbol={symbol};{key}={pos[key]}"
                     )
                     pos[key] = None
                     await self._restore_tp(symbol, pos, key, level)
+
 
     def _classify_orders_for_symbol(
         self,

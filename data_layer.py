@@ -1,8 +1,10 @@
 # data_layer.py
 import time
+import asyncio
 from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
+
 
 # ============================
 #   ПРОСТОЙ КЭШ С TTL
@@ -28,7 +30,10 @@ class TTLCache:
         self._store[key] = (time.time(), value)
 
 
-# Кэши по типам данных
+# ============================
+#   КЭШИ
+# ============================
+
 _tickers_cache = TTLCache(ttl_seconds=10)
 _klines_cache = TTLCache(ttl_seconds=10)
 _oi_cache = TTLCache(ttl_seconds=60)
@@ -41,18 +46,65 @@ BASE_URL = "https://api.bybit.com"
 
 
 # ============================
-#   ОБЩИЙ ХЕЛПЕР ЗАПРОСОВ
+#   УСИЛЕННЫЙ REQUEST LAYER
 # ============================
 
-async def _get_json(session: aiohttp.ClientSession, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+async def _get_json(
+    session: aiohttp.ClientSession,
+    path: str,
+    params: Dict[str, Any],
+    retries: int = 3
+) -> Dict[str, Any]:
+
     url = BASE_URL + path
-    try:
-        async with session.get(url, params=params, timeout=10) as resp:
-            if resp.status != 200:
-                return {}
-            return await resp.json()
-    except Exception:
-        return {}
+    delay = 0.5
+
+    for attempt in range(retries):
+        try:
+            async with session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+
+                if resp.status == 429:
+                    # Rate limit
+                    await asyncio.sleep(delay)
+                    delay *= 2
+                    continue
+
+                if resp.status >= 500:
+                    await asyncio.sleep(delay)
+                    delay *= 2
+                    continue
+
+                if resp.status != 200:
+                    return {}
+
+                data = await resp.json()
+
+                # Проверка retCode Bybit
+                if isinstance(data, dict):
+                    if data.get("retCode", 0) != 0:
+                        await asyncio.sleep(delay)
+                        delay *= 2
+                        continue
+
+                return data
+
+        except asyncio.TimeoutError:
+            await asyncio.sleep(delay)
+            delay *= 2
+
+        except aiohttp.ClientError:
+            await asyncio.sleep(delay)
+            delay *= 2
+
+        except Exception:
+            await asyncio.sleep(delay)
+            delay *= 2
+
+    return {}
 
 
 # ============================
@@ -81,6 +133,7 @@ async def fetch_klines(
     interval: str = "1",
     limit: int = 80
 ) -> List[List[Any]]:
+
     cache_key = (symbol, interval, limit)
     cached = _klines_cache.get(cache_key)
     if cached is not None:
@@ -92,6 +145,7 @@ async def fetch_klines(
         "interval": interval,
         "limit": limit
     }
+
     data = await _get_json(session, "/v5/market/kline", params)
     result = data.get("result", {}).get("list", []) if isinstance(data, dict) else []
     _klines_cache.set(cache_key, result)
@@ -107,6 +161,7 @@ async def fetch_open_interest(
     symbol: str,
     interval: str = "15"
 ) -> Tuple[Optional[float], Optional[float]]:
+
     cache_key = (symbol, "oi", interval)
     cached = _oi_cache.get(cache_key)
     if cached is not None:
@@ -117,6 +172,7 @@ async def fetch_open_interest(
         "symbol": symbol,
         "interval": interval
     }
+
     data = await _get_json(session, "/v5/market/open-interest", params)
     result = data.get("result", {}).get("list", []) if isinstance(data, dict) else []
 
@@ -143,6 +199,7 @@ async def fetch_funding_rate(
     session: aiohttp.ClientSession,
     symbol: str
 ) -> Optional[float]:
+
     cache_key = (symbol, "funding")
     cached = _funding_cache.get(cache_key)
     if cached is not None:
@@ -153,6 +210,7 @@ async def fetch_funding_rate(
         "symbol": symbol,
         "limit": 1
     }
+
     data = await _get_json(session, "/v5/market/funding/history", params)
     result = data.get("result", {}).get("list", []) if isinstance(data, dict) else []
 
@@ -178,6 +236,7 @@ async def fetch_liquidations(
     symbol: str,
     minutes: int = 15
 ) -> Tuple[float, float]:
+
     cache_key = (symbol, "liq", minutes)
     cached = _liq_cache.get(cache_key)
     if cached is not None:
@@ -188,6 +247,7 @@ async def fetch_liquidations(
         "symbol": symbol,
         "limit": 50
     }
+
     data = await _get_json(session, "/v5/market/liquidation", params)
     result = data.get("result", {}).get("list", []) if isinstance(data, dict) else []
 
@@ -206,14 +266,17 @@ async def fetch_liquidations(
             ts = int(item.get("updatedTime", item.get("createdTime", now_ms)))
             if ts < cutoff:
                 continue
+
             side = item.get("side")
             qty = float(item.get("qty", 0))
             price = float(item.get("price", 0))
             notional = qty * price
+
             if side == "Sell":
                 long_liq += notional
             elif side == "Buy":
                 short_liq += notional
+
         except Exception:
             continue
 
@@ -231,6 +294,7 @@ async def fetch_recent_trades(
     symbol: str,
     limit: int = 200
 ) -> List[Dict[str, Any]]:
+
     cache_key = (symbol, "trades", limit)
     cached = _trades_cache.get(cache_key)
     if cached is not None:
@@ -241,6 +305,7 @@ async def fetch_recent_trades(
         "symbol": symbol,
         "limit": limit
     }
+
     data = await _get_json(session, "/v5/market/recent-trade", params)
     result = data.get("result", {}).get("list", []) if isinstance(data, dict) else []
 
@@ -249,7 +314,7 @@ async def fetch_recent_trades(
 
 
 # ============================
-#   ORDERBOOK (DEPTH)
+#   ORDERBOOK
 # ============================
 
 async def fetch_orderbook(
@@ -257,6 +322,7 @@ async def fetch_orderbook(
     symbol: str,
     limit: int = 50
 ) -> Dict[str, Any]:
+
     cache_key = (symbol, "orderbook", limit)
     cached = _orderbook_cache.get(cache_key)
     if cached is not None:
@@ -267,11 +333,10 @@ async def fetch_orderbook(
         "symbol": symbol,
         "limit": limit
     }
-    data = await _get_json(session, "/v5/market/orderbook", params)
 
+    data = await _get_json(session, "/v5/market/orderbook", params)
     result = data.get("result", {}) if isinstance(data, dict) else {}
 
-    # Bybit v5 sometimes returns {"result": {"list": [ {...} ]}}
     if isinstance(result, dict) and "list" in result:
         lst = result.get("list")
         if isinstance(lst, list) and lst:

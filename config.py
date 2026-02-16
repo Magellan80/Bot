@@ -19,12 +19,14 @@ BYBIT_API_KEY = os.getenv("BYBIT_API_KEY")
 BYBIT_API_SECRET = os.getenv("BYBIT_API_SECRET")
 
 # В режиме скринера Bybit ключи могут быть пустыми — это нормально
-# Поэтому НЕ выбрасываем ошибку
 if not BYBIT_API_KEY or not BYBIT_API_SECRET:
     print("⚠ WARNING: BYBIT_API_KEY / BYBIT_API_SECRET not set — trading disabled")
 
 # ====== ФАЙЛ НАСТРОЕК ======
 SETTINGS_FILE = "settings.json"
+
+# ====== КЭШ НАСТРОЕК ======
+_settings_cache = None
 
 # ====== РЕЖИМЫ A / B / C ======
 MODES = {
@@ -58,7 +60,13 @@ MODES = {
 DEFAULT_MIN_SCORE = 40
 
 
-def load_settings():
+# ============================================================
+#   SETTINGS (С КЭШЕМ)
+# ============================================================
+
+def load_settings(force_reload: bool = False):
+    global _settings_cache
+
     defaults = {
         "mode": "A",
         "min_score": DEFAULT_MIN_SCORE,
@@ -67,28 +75,52 @@ def load_settings():
         "reversal_state_ttl_sec": 7200,
         "reversal_min_score_bonus": 10,
         "reversal_min_delay_bars": 3,
+        "bot_mode": "SCREENER",
     }
+
+    # Если кэш есть и не требуется принудительная перезагрузка
+    if _settings_cache is not None and not force_reload:
+        return _settings_cache
+
     if not os.path.exists(SETTINGS_FILE):
-        return defaults
-    with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if isinstance(data, dict):
-        defaults.update(data)
-        if "strictness_level" not in data and "strict_mode" in data:
-            defaults["strictness_level"] = "strict" if data["strict_mode"] else "soft"
-    return defaults
+        _settings_cache = defaults
+        return _settings_cache
+
+    try:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if isinstance(data, dict):
+            defaults.update(data)
+
+    except Exception as e:
+        print(f"[CONFIG] Error loading settings: {e}")
+
+    _settings_cache = defaults
+    return _settings_cache
 
 
 def save_settings(settings: dict):
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(settings, f, indent=4, ensure_ascii=False)
+    global _settings_cache
+
+    try:
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        print(f"[CONFIG] Error saving settings: {e}")
+        return
+
+    # Обновляем кэш
+    _settings_cache = settings
 
 
 def get_current_mode():
     settings = load_settings()
     mode_key = settings.get("mode", "A")
+
     if mode_key not in MODES:
         mode_key = "A"
+
     return mode_key, MODES[mode_key]
 
 

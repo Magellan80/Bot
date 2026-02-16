@@ -20,6 +20,12 @@ from data_layer import (
 )
 from liquidity_map import build_liquidity_map
 
+from strategy_selector import StrategySelector
+
+strategy_selector = StrategySelector()
+
+from asset_profile_engine import AssetProfileEngine
+
 from context import (
     compute_trend_score,
     compute_risk_score,
@@ -63,6 +69,11 @@ _BTC_CTX_CACHE = {
     "factor": 1.0,
     "regime": "neutral",
 }
+# =====================================================
+# GLOBAL DEBUG FLAGS
+# =====================================================
+
+DEBUG_ROUTER = True
 
 # =====================================================
 # SCREENER V3 MAX — MODE SYSTEM (Balanced Pro DEFAULT)
@@ -847,18 +858,208 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     is_dump, dump_rating = detect_big_dump(closes_1m, highs_1m, lows_1m, volumes_1m, mode_cfg)
     is_rev_pump, rev_pump_rating = detect_pump_reversal(closes_1m, highs_1m, lows_1m, volumes_1m)
 
-    rev = detector.analyze(closes_1m, highs_1m, lows_1m, volumes_1m)
+
     habr = detector.analyze_habr(closes_1m, highs_1m, lows_1m, volumes_1m)
 
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
 
+    # =====================================================
+    # BTC CONTEXT
+    # =====================================================
+
     btc_ctx = await compute_btc_stability(session)
-    btc_factor = btc_ctx["factor"]
-    btc_regime = btc_ctx["regime"]
+
+    btc_regime = btc_ctx.get("regime", "neutral")
+    btc_factor = btc_ctx.get("factor", 1.0)
+
+    # 🔒 HARD CLAMP (critical stabilization)
+    btc_factor = max(0.85, min(btc_factor, 1.15))
+
+
+    # =====================================================
+    # REVERSAL STATE
+    # =====================================================
+
     reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
+
+
+    # =====================================================
+    # ASSET PROFILE ENGINE
+    # =====================================================
+
+    asset_engine = AssetProfileEngine()
+
+    asset_profile = asset_engine.analyze(
+        closes_1m,
+        highs_1m,
+        lows_1m,
+    )
+
+    asset_class = asset_profile.get("asset_class", "mid")
+
+
+    # =====================================================
+    # STRATEGY SELECTION
+    # =====================================================
+
+    strategy = strategy_selector.choose(btc_regime, asset_class)
+
+    base_min_score = strategy_selector.get_min_score(
+        btc_regime,
+        asset_class
+    )
+
+    # 🔥 Adaptive threshold (stable formula)
+    adaptive_min_score = int(base_min_score * (2 - btc_factor))
+
+    # 🔒 Safety clamp for threshold
+    adaptive_min_score = max(50, min(adaptive_min_score, 72))
+
+
+    # =====================================================
+    # DETECTION PHASE (NO INTERNAL FILTER)
+    # =====================================================
+
+    rev = {"reversal": None, "rating": 0}
+
+    if strategy == "reversal":
+
+        result = detector.analyze_reversal(
+            closes_1m,
+            highs_1m,
+            lows_1m,
+            volumes_1m,
+            htf_trend_1h=trend_1h,
+            htf_trend_4h=trend_4h,
+            structure_1h=structure_1h,
+            structure_4h=structure_4h,
+            event_1h=event_1h,
+            event_4h=event_4h,
+            market_regime=btc_regime,
+            asset_class=asset_class,
+            min_score=0,  # ❗ disabled internal filter
+        )
+
+        if result:
+            rev = result
+
+
+    elif strategy == "continuation":
+
+        cont = detector.analyze_continuation(
+            closes_1m,
+            highs_1m,
+            lows_1m,
+            volumes_1m,
+            trend_1h=trend_1h,
+            trend_4h=trend_4h,
+            asset_class=asset_class,
+            market_regime=btc_regime,
+            min_score=0,
+        )
+
+        if cont:
+            rev = {
+                "reversal": cont.get("direction"),
+                "rating": cont.get("rating", 0),
+            }
+
+
+    # =====================================================
+    # ADAPTIVE SCORING ENGINE V10.2
+    # =====================================================
+
+    raw_rating = rev.get("rating", 0)
+
+    if DEBUG_ROUTER:
+        print("Raw rating BEFORE weighting:", raw_rating)
+
+    weighted_rating = raw_rating
+
+    if rev.get("reversal"):
+
+        # 1️⃣ Regime multiplier
+        if btc_regime == "trending":
+            weighted_rating *= 1.07
+        elif btc_regime == "ranging":
+            weighted_rating *= 1.05
+        elif btc_regime == "high_vol":
+            weighted_rating *= 0.95
+
+        # 2️⃣ State reinforcement
+        if reversal_state:
+            state_type = reversal_state.get("type")
+            if strategy == "reversal" and state_type in ("pump", "dump"):
+                weighted_rating *= 1.07
+
+        # 3️⃣ Volatility normalization
+        if len(highs_1m) >= 20:
+            recent_range = max(highs_1m[-20:]) - min(lows_1m[-20:])
+            avg_price = sum(closes_1m[-20:]) / 20
+
+            volatility_pct = (recent_range / avg_price) * 100 if avg_price > 0 else 0
+
+            if volatility_pct < 0.35:
+                weighted_rating *= 0.96
+            elif volatility_pct > 1.3:
+                weighted_rating *= 1.03
+
+        # 4️⃣ Liquidity proximity
+        direction = rev.get("reversal")
+
+        if direction in ("Dump → Pump", "bullish") and liq_bias == "below":
+            weighted_rating *= 1.04
+
+        if direction in ("Pump → Dump", "bearish") and liq_bias == "above":
+            weighted_rating *= 1.04
+
+        # 5️⃣ Asset confidence bonus
+        if asset_class == "major":
+            weighted_rating *= 1.03
+
+
+    # FINAL CLAMP (всегда выполняется)
+    weighted_rating = int(max(0, min(weighted_rating, 100)))
+
+    # ✅ SINGLE FINAL THRESHOLD CHECK
+    if weighted_rating >= adaptive_min_score:
+        rev["rating"] = weighted_rating
+    else:
+        rev = {"reversal": None, "rating": weighted_rating}
+
+
+    # =====================================================
+    # END V10.2 ROUTER
+    # =====================================================
+    # =====================================================
+    # DEBUG V10.2 ROUTER
+    # =====================================================
+
+    if DEBUG_ROUTER:
+        print("\n========== ROUTER DEBUG ==========")
+        print("Symbol:", symbol)
+        print("BTC regime:", btc_regime)
+        print("Strategy:", strategy)
+        print("Asset class:", asset_class)
+        print("Base min score:", base_min_score)
+        print("Adaptive min score:", adaptive_min_score)
+
+        print("Raw rating:", rev.get("rating"))
+        print("Direction:", rev.get("reversal"))
+
+        if weighted_rating:
+            print("Weighted rating:", weighted_rating)
+
+        if rev.get("reversal"):
+            print("Reversal passed raw detector")
+        else:
+            print("No reversal signal")
+
+        print("==================================\n")
 
     candidates = []
 
+   
     # === HABR STRATEGY ===
     if habr and habr.get("rating", 0) >= min_score:
         direction = "Dump → Pump" if habr["direction"] == "bullish" else "Pump → Dump"
@@ -1352,16 +1553,31 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
 
 async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
+
     async with aiohttp.ClientSession() as session:
+        print("🚀 scanner_loop started")
+
         while True:
+            print("🔄 scanning iteration...")
+
             try:
                 tickers = await fetch_tickers(session)
 
+                # 🔥 сортировка по объёму
+                tickers = sorted(
+                    tickers,
+                    key=lambda x: float(x.get("turnover24h", 0)),
+                    reverse=True
+                )
+
+                # 🔥 ограничиваем количество символов
                 symbols = [
                     (t["symbol"], t)
-                    for t in tickers
+                    for t in tickers[:40]
                     if t.get("symbol", "").endswith("USDT")
                 ]
+
+                print(f"Scanning {len(symbols)} symbols")
 
                 tasks = [
                     analyze_symbol_async(session, s, min_score, tinfo)
@@ -1369,50 +1585,83 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                 ]
 
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                signals = [r for r in results if isinstance(r, dict)]
+
+                # печать ошибок
+                for r in results:
+                    if isinstance(r, Exception):
+                        print("Symbol error:", repr(r))
+
+                # фильтрация валидных сигналов
+                signals = [
+                    r for r in results
+                    if isinstance(r, dict)
+                    and r.get("direction") is not None
+                    and r.get("rating", 0) > 0
+                ]
+
+                print(f"Signals found: {len(signals)}")
 
                 if signals:
-                    signals.sort(key=lambda x: x["rating"], reverse=True)
+                    signals.sort(key=lambda x: x.get("rating", 0), reverse=True)
 
-                    for s in signals[:10]:
-                        symbol_regime = s.get("symbol_regime", {}) or {}
-                        market_ctx = s.get("market_ctx", {}) or {}
-                        vol_cluster = s.get("vol_cluster", {}) or {}
-                        mem_profile = (s.get("symbol_memory") or {}).get("profile", {}) or {}
-                        pump_prob = float(mem_profile.get("pump_probability") or 0.0)
-                        dump_prob = float(mem_profile.get("dump_probability") or 0.0)
-                        confidence = float(s.get("confidence") or 0.0)
+                    for s in signals[:5]:
+
+                        if (
+                            not all(k in s for k in ("meta_closes", "meta_highs", "meta_lows"))
+                            or not s["meta_closes"]
+                            or not s["meta_highs"]
+                            or not s["meta_lows"]
+                        ):
+                            continue
+
+                        print(f"Sending signal {s['symbol']} rating={s['rating']}")
+
+                        # === ПОДРОБНЫЙ ТЕКСТ ===
 
                         text = (
-                            f"{s['emoji']} {s['type']} — {s['symbol']}\n"
-                            f"Цена: {s['price']:.4f} USDT\n"
-                            f"Сила сигнала: {s['rating']}/100\n"
-                            f"Уверенность: {confidence:.2f}\n"
-                            f"Trend Score: {s['trend_score']}\n"
-                            f"Risk Score: {s['risk_score']}\n"
-                            f"HTF 15m: {s.get('trend_15m', 0)} | 1h: {s.get('trend_1h', 0)} | 4h: {s.get('trend_4h', 0)}\n"
-                            f"Symbol Regime: {symbol_regime.get('regime')} (strength={symbol_regime.get('strength')})\n"
-                            f"Market Regime: {market_ctx.get('market_regime')} | Risk: {market_ctx.get('risk')}\n"
-                            f"Vol Cluster: {vol_cluster.get('cluster')} | VolScore: {vol_cluster.get('volatility_score')}\n"
-                            f"Symbol Memory Regime: {mem_profile.get('regime')} | PumpProb: {pump_prob:.2f} | DumpProb: {dump_prob:.2f}\n"
-                            f"OI: {s['oi']}\n"
-                            f"{format_funding_text(s['funding'])}\n"
-                            f"{format_liq_text(s['liq'])}\n"
-                            f"{format_flow_text(s['flow'])}\n"
-                            f"{format_delta_text(s['delta'])}\n"
-                            f"Liquidity Bias: {s.get('liq_map_bias')}\n"
-                            f"Strongest Zone: {s.get('liq_map_strongest')}\n"
-                            f"Vacuum Up: {s.get('liq_map_vac_up')} | Down: {s.get('liq_map_vac_down')}\n"
+                            f"{s['emoji']} {s['type']} — {s['symbol']}\n\n"
+
+                            f"💰 Цена: {s['price']:.4f} USDT\n"
+                            f"📊 Рейтинг: {s['rating']}/100\n"
+                            f"⚡ Confidence: {s.get('confidence','n/a')}\n\n"
+
+                            f"📈 Trend score: {s.get('trend_score')}\n"
+                            f"📉 Risk score: {s.get('risk_score')}\n\n"
+
+                            f"🧠 Flow: {s.get('flow')}\n"
+                            f"🔀 Delta: {s.get('delta')}\n"
+                            f"💦 Liquidity: {s.get('liq')}\n"
+                            f"🏦 OI: {s.get('oi')}\n"
+                            f"💸 Funding: {s.get('funding')}\n\n"
+
+                            f"🕒 15m: {s.get('trend_15m')}\n"
+                            f"🕒 1h: {s.get('trend_1h')}\n"
+                            f"🕒 4h: {s.get('trend_4h')}\n\n"
+
+                            f"🧬 Market ctx: {s.get('market_ctx')}\n"
+                            f"🧠 Memory regime: {s.get('symbol_regime')}"
                         )
 
-                        await send_text(text)
+                        # === ГРАФИК ===
 
-                        klines_15m = await fetch_klines(session, s["symbol"], interval="15", limit=96)
-                        chart = generate_candle_chart(klines_15m, s["symbol"], timeframe_label="15m")
+                        chart = generate_candle_chart(
+                            klines=[
+                                [0, 0, h, l, c, 0]
+                                for c, h, l in zip(
+                                    s["meta_closes"][:50],
+                                    s["meta_highs"][:50],
+                                    s["meta_lows"][:50],
+                                )
+                            ],
+                            symbol=s["symbol"],
+                            timeframe_label="1m"
+                        )
 
                         if chart:
                             photo = BufferedInputFile(chart.getvalue(), filename=f"{s['symbol']}.png")
-                            await send_photo(photo)
+                            await send_photo(photo, text)
+                        else:
+                            await send_text(text)
 
                         if engine is not None:
                             await engine.on_signal(s)
@@ -1420,11 +1669,5 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                 await asyncio.sleep(30)
 
             except Exception as e:
-                log_error(e)
-                try:
-                    await send_text(f"⚠️ Ошибка в сканере, перезапускаю цикл...\n{repr(e)}")
-                except:
-                    pass
+                print("SCANNER LOOP ERROR:", repr(e))
                 await asyncio.sleep(5)
-                continue
-                        

@@ -1,12 +1,12 @@
 {
     "mode": "A",
-    "min_score": 45,
+    "min_score": 25,
     "strictness_level": "soft",
     "reversal_requires_state": false,
     "reversal_state_ttl_sec": 3600,
     "reversal_min_score_bonus": 5,
     "reversal_min_delay_bars": 1,
+    "bot_mode": "SCREENER",
     "strict_mode": false,
-    "enable_ultra_hybrid": true,
-    "bot_mode": "SCREENER"
+    "enable_ultra_hybrid": true
 }

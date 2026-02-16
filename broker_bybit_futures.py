@@ -1,4 +1,5 @@
 # broker_bybit_futures.py
+
 import time
 import hmac
 import hashlib
@@ -11,19 +12,10 @@ from trading_engine import PositionSide
 
 class BrokerBybitFutures:
     """
-    BrokerBybitFutures
-    -------------------
-    - Bybit Unified Trading (USDT Perpetual, category=linear)
-    - Поддерживает:
-        * get_equity
-        * get_last_price
-        * open_market_order
-        * close_market_order
-        * place_take_profit
-        * place_stop_loss_market
-        * get_open_positions
-        * get_open_orders
-        * cancel_order
+    Stable production-ready broker layer
+    - Single persistent aiohttp session
+    - Retry mechanism
+    - Clean error logging
     """
 
     def __init__(
@@ -37,9 +29,10 @@ class BrokerBybitFutures:
         self.api_secret = api_secret.encode()
         self.base_url = base_url.rstrip("/")
         self.recv_window = recv_window
+        self.session = aiohttp.ClientSession()
 
     # ============================
-    #   ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
+    # INTERNAL HELPERS
     # ============================
 
     def _timestamp(self) -> int:
@@ -64,77 +57,89 @@ class BrokerBybitFutures:
         method: str,
         path: str,
         params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        retries: int = 3,
+    ) -> Optional[Dict[str, Any]]:
+
         url = self.base_url + path
         params = params or {}
 
-        params["api_key"] = self.api_key
-        params["timestamp"] = self._timestamp()
-        params["recvWindow"] = self.recv_window
-        params["sign"] = self._sign(params)
+        for attempt in range(retries):
+            try:
+                params["api_key"] = self.api_key
+                params["timestamp"] = self._timestamp()
+                params["recvWindow"] = self.recv_window
+                params["sign"] = self._sign(params)
 
-        async with aiohttp.ClientSession() as session:
-            if method.upper() == "GET":
-                async with session.get(url, params=params) as resp:
-                    data = await resp.json()
-            else:
-                async with session.post(url, data=params) as resp:
-                    data = await resp.json()
+                if method.upper() == "GET":
+                    async with self.session.get(url, params=params) as resp:
+                        data = await resp.json()
+                else:
+                    async with self.session.post(url, data=params) as resp:
+                        data = await resp.json()
 
-        return data
+                if data.get("retCode") == 0:
+                    return data
+
+                print(f"[BROKER][ERROR] {data.get('retCode')} - {data.get('retMsg')}")
+
+            except Exception as e:
+                print(f"[BROKER][EXCEPTION] Attempt {attempt + 1}: {e}")
+
+        return None
+
+    async def close(self):
+        if self.session and not self.session.closed:
+            await self.session.close()
 
     # ============================
-    #   ОБЯЗАТЕЛЬНЫЕ МЕТОДЫ
+    # PUBLIC METHODS
     # ============================
 
     async def get_equity(self) -> Optional[float]:
-        try:
-            params = {
-                "accountType": "UNIFIED",
-            }
-            data = await self._request("GET", "/v5/account/wallet-balance", params)
-            if data.get("retCode") != 0:
-                return None
+        data = await self._request(
+            "GET",
+            "/v5/account/wallet-balance",
+            {"accountType": "UNIFIED"},
+        )
 
-            result = data.get("result", {})
-            list_ = result.get("list", [])
-            if not list_:
-                return None
-
-            for acc in list_:
-                coin_list = acc.get("coin", [])
-                for c in coin_list:
-                    if c.get("coin") == "USDT":
-                        equity = float(c.get("equity", 0))
-                        return equity
+        if not data:
             return None
+
+        try:
+            for acc in data["result"]["list"]:
+                for c in acc.get("coin", []):
+                    if c.get("coin") == "USDT":
+                        return float(c.get("equity", 0))
         except Exception:
             return None
+
+        return None
 
     async def get_last_price(self, symbol: str) -> Optional[float]:
+        data = await self._request(
+            "GET",
+            "/v5/market/tickers",
+            {"category": "linear", "symbol": symbol},
+        )
+
+        if not data:
+            return None
+
         try:
-            params = {
-                "category": "linear",
-                "symbol": symbol,
-            }
-            data = await self._request("GET", "/v5/market/tickers", params)
-            if data.get("retCode") != 0:
-                return None
-
-            result = data.get("result", {})
-            list_ = result.get("list", [])
-            if not list_:
-                return None
-
-            last_price = float(list_[0].get("lastPrice", 0))
-            return last_price
+            return float(data["result"]["list"][0]["lastPrice"])
         except Exception:
             return None
 
-    async def open_market_order(self, symbol: str, side: PositionSide, size: float) -> Optional[str]:
-        try:
-            side_str = "Buy" if side == PositionSide.LONG else "Sell"
-            params = {
+    async def open_market_order(
+        self, symbol: str, side: PositionSide, size: float
+    ) -> Optional[str]:
+
+        side_str = "Buy" if side == PositionSide.LONG else "Sell"
+
+        data = await self._request(
+            "POST",
+            "/v5/order/create",
+            {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side_str,
@@ -142,24 +147,24 @@ class BrokerBybitFutures:
                 "qty": str(size),
                 "timeInForce": "GoodTillCancel",
                 "reduceOnly": "false",
-            }
-            data = await self._request("POST", "/v5/order/create", params)
-            ret_code = data.get("retCode")
-            if ret_code != 0:
-                error_msg = data.get("retMsg", "Unknown error")
-                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
-                return None
+            },
+        )
 
-            result = data.get("result", {})
-            order_id = result.get("orderId")
-            return order_id
-        except Exception:
+        if not data:
             return None
 
-    async def close_market_order(self, symbol: str, side: PositionSide, size: float) -> Optional[str]:
-        try:
-            side_str = "Sell" if side == PositionSide.LONG else "Buy"
-            params = {
+        return data["result"].get("orderId")
+
+    async def close_market_order(
+        self, symbol: str, side: PositionSide, size: float
+    ) -> Optional[str]:
+
+        side_str = "Sell" if side == PositionSide.LONG else "Buy"
+
+        data = await self._request(
+            "POST",
+            "/v5/order/create",
+            {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side_str,
@@ -167,30 +172,28 @@ class BrokerBybitFutures:
                 "qty": str(size),
                 "timeInForce": "GoodTillCancel",
                 "reduceOnly": "true",
-            }
-            data = await self._request("POST", "/v5/order/create", params)
-            ret_code = data.get("retCode")
-            if ret_code != 0:
-                error_msg = data.get("retMsg", "Unknown error")
-                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
-                return None
+            },
+        )
 
-            result = data.get("result", {})
-            order_id = result.get("orderId")
-            return order_id
-        except Exception:
+        if not data:
             return None
+
+        return data["result"].get("orderId")
 
     async def place_take_profit(
         self,
         symbol: str,
         side: PositionSide,
         size: float,
-        price: float
+        price: float,
     ) -> Optional[str]:
-        try:
-            side_str = "Sell" if side == PositionSide.LONG else "Buy"
-            params = {
+
+        side_str = "Sell" if side == PositionSide.LONG else "Buy"
+
+        data = await self._request(
+            "POST",
+            "/v5/order/create",
+            {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side_str,
@@ -199,141 +202,102 @@ class BrokerBybitFutures:
                 "price": f"{price:.4f}",
                 "timeInForce": "GoodTillCancel",
                 "reduceOnly": "true",
-            }
-            data = await self._request("POST", "/v5/order/create", params)
-            ret_code = data.get("retCode")
-            if ret_code != 0:
-                error_msg = data.get("retMsg", "Unknown error")
-                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
-                return None
+            },
+        )
 
-            result = data.get("result", {})
-            order_id = result.get("orderId")
-            return order_id
-        except Exception:
+        if not data:
             return None
 
-    async def place_stop_loss(self, symbol: str, side: PositionSide, size: float, price: float) -> Optional[str]:
-        try:
-            side_str = "Sell" if side == PositionSide.LONG else "Buy"
-            params = {
-                "category": "linear",
-                "symbol": symbol,
-                "side": side_str,
-                "orderType": "Limit",
-                "qty": str(size),
-                "price": f"{price:.4f}",
-                "timeInForce": "GoodTillCancel",
-                "reduceOnly": "true",
-            }
-            data = await self._request("POST", "/v5/order/create", params)
-            ret_code = data.get("retCode")
-            if ret_code != 0:
-                error_msg = data.get("retMsg", "Unknown error")
-                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
-                return None
-
-            result = data.get("result", {})
-            order_id = result.get("orderId")
-            return order_id
-        except Exception:
-            return None
-
-    async def get_open_positions(self) -> List[Dict[str, Any]]:
-        try:
-            params = {
-                "category": "linear",
-            }
-            data = await self._request("GET", "/v5/position/list", params)
-            if data.get("retCode") != 0:
-                return []
-
-            result = data.get("result", {})
-            list_ = result.get("list", [])
-            positions = []
-            for p in list_:
-                size = float(p.get("size", 0) or 0)
-                if size == 0:
-                    continue
-                positions.append(
-                    {
-                        "symbol": p.get("symbol"),
-                        "side": p.get("side"),  # "Buy" / "Sell"
-                        "size": p.get("size"),
-                        "avgPrice": p.get("avgPrice"),
-                    }
-                )
-            return positions
-        except Exception:
-            return []
-
-    async def get_open_orders(self, symbol: str | None = None) -> List[Dict[str, Any]]:
-        """
-        Открытые ордера (TP/SL/прочие) по category=linear.
-        """
-        try:
-            params = {
-                "category": "linear",
-            }
-            if symbol:
-                params["symbol"] = symbol
-
-            data = await self._request("GET", "/v5/order/realtime", params)
-            if data.get("retCode") != 0:
-                return []
-
-            result = data.get("result", {})
-            list_ = result.get("list", [])
-            return list_ or []
-        except Exception:
-            return []
-
-    async def cancel_order(self, symbol: str, order_id: str) -> bool:
-        try:
-            params = {
-                "category": "linear",
-                "symbol": symbol,
-                "orderId": order_id,
-            }
-            data = await self._request("POST", "/v5/order/cancel", params)
-            if data.get("retCode") != 0:
-                return False
-            return True
-        except Exception:
-            return False
+        return data["result"].get("orderId")
 
     async def place_stop_loss_market(
         self,
         symbol: str,
         side: PositionSide,
         size: float,
-        trigger_price: float
+        trigger_price: float,
     ) -> Optional[str]:
-        try:
-            side_str = "Sell" if side == PositionSide.LONG else "Buy"
 
-            params = {
+        side_str = "Sell" if side == PositionSide.LONG else "Buy"
+
+        data = await self._request(
+            "POST",
+            "/v5/order/create",
+            {
                 "category": "linear",
                 "symbol": symbol,
                 "side": side_str,
                 "orderType": "Market",
                 "qty": str(size),
-                "timeInForce": "GoodTillCancel",
                 "reduceOnly": "true",
                 "triggerPrice": f"{trigger_price:.4f}",
                 "triggerDirection": 2 if side == PositionSide.LONG else 1,
                 "triggerBy": "LastPrice",
-            }
+            },
+        )
 
-            data = await self._request("POST", "/v5/order/create", params)
-            ret_code = data.get("retCode")
-            if ret_code != 0:
-                error_msg = data.get("retMsg", "Unknown error")
-                print(f"❌ [BROKER] open_market_order failed: {ret_code} - {error_msg}")
-                return None
-
-            result = data.get("result", {})
-            order_id = result.get("orderId")
-            return order_id
-        except Exception:
+        if not data:
             return None
+
+        return data["result"].get("orderId")
+
+    async def get_open_positions(self) -> List[Dict[str, Any]]:
+        data = await self._request(
+            "GET",
+            "/v5/position/list",
+            {"category": "linear"},
+        )
+
+        if not data:
+            return []
+
+        positions = []
+
+        try:
+            for p in data["result"]["list"]:
+                size = float(p.get("size", 0) or 0)
+                if size == 0:
+                    continue
+                positions.append(
+                    {
+                        "symbol": p.get("symbol"),
+                        "side": p.get("side"),
+                        "size": size,
+                        "avgPrice": float(p.get("avgPrice", 0)),
+                    }
+                )
+        except Exception:
+            return []
+
+        return positions
+
+    async def get_open_orders(self, symbol: str | None = None) -> List[Dict[str, Any]]:
+
+        params = {"category": "linear"}
+        if symbol:
+            params["symbol"] = symbol
+
+        data = await self._request(
+            "GET",
+            "/v5/order/realtime",
+            params,
+        )
+
+        if not data:
+            return []
+
+        return data["result"].get("list", []) or []
+
+    async def cancel_order(self, symbol: str, order_id: str) -> bool:
+
+        data = await self._request(
+            "POST",
+            "/v5/order/cancel",
+            {
+                "category": "linear",
+                "symbol": symbol,
+                "orderId": order_id,
+            },
+        )
+
+        return bool(data)

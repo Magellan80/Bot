@@ -19,24 +19,38 @@ def clamp(value, min_v=0, max_v=100):
 
 
 def compute_change_percent(closes: List[float], idx_now: int, idx_past: int) -> float:
-    if idx_past >= len(closes):
+    if not closes:
         return 0.0
+
+    if idx_now >= len(closes) or idx_past >= len(closes):
+        return 0.0
+
     now = closes[idx_now]
     past = closes[idx_past]
+
     if past == 0:
         return 0.0
+
     return (now - past) / past * 100.0
 
 
 def count_trend_bars(closes: List[float], lookback=12) -> Tuple[int, int]:
+    if not closes:
+        return 0, 0
+
     up = 0
     down = 0
     max_i = min(lookback, len(closes)) - 1
+
     for i in range(max_i):
-        if closes[i] > closes[i + 1]:
-            up += 1
-        elif closes[i] < closes[i + 1]:
-            down += 1
+        try:
+            if closes[i] > closes[i + 1]:
+                up += 1
+            elif closes[i] < closes[i + 1]:
+                down += 1
+        except Exception:
+            continue
+
     return up, down
 
 
@@ -47,24 +61,30 @@ def count_trend_bars(closes: List[float], lookback=12) -> Tuple[int, int]:
 def funding_bias(fr: Optional[float]) -> str:
     if fr is None:
         return "neutral"
+
     fr_pct = fr * 100
+
     if fr_pct > 0.01:
         return "bearish"
     if fr_pct < -0.01:
         return "bullish"
+
     return "neutral"
 
 
 def format_funding_text(fr: Optional[float]) -> str:
     if fr is None:
         return "Funding: n/a"
+
     fr_pct = fr * 100
+
     if fr_pct > 0.01:
         bias = "bearish pressure"
     elif fr_pct < -0.01:
         bias = "bullish pressure"
     else:
         bias = "neutral"
+
     return f"Funding: {fr_pct:.4f}% ({bias})"
 
 
@@ -78,6 +98,7 @@ def interpret_liquidations(long_liq: float, short_liq: float, threshold=100000.0
 
     if long_liq > short_liq * 1.5 and long_liq > threshold:
         return "long_spike"
+
     if short_liq > long_liq * 1.5 and short_liq > threshold:
         return "short_spike"
 
@@ -112,13 +133,16 @@ def analyze_flow_from_trades(trades, big_trade_threshold=25000.0):
             qty = float(t.get("qty", 0))
             price = float(t.get("price", 0))
             notional = qty * price
+
             if notional < big_trade_threshold:
                 continue
+
             if side == "Buy":
                 big_buy += notional
             elif side == "Sell":
                 big_sell += notional
-        except:
+
+        except Exception:
             continue
 
     if big_buy == 0 and big_sell == 0:
@@ -126,6 +150,7 @@ def analyze_flow_from_trades(trades, big_trade_threshold=25000.0):
 
     if big_buy > big_sell * 1.5:
         return "aggressive_buyers"
+
     if big_sell > big_buy * 1.5:
         return "aggressive_sellers"
 
@@ -145,11 +170,13 @@ def analyze_delta_from_trades(trades):
             qty = float(t.get("qty", 0))
             price = float(t.get("price", 0))
             notional = qty * price
+
             if side == "Buy":
                 buy_vol += notional
             elif side == "Sell":
                 sell_vol += notional
-        except:
+
+        except Exception:
             continue
 
     if buy_vol == 0 and sell_vol == 0:
@@ -157,6 +184,7 @@ def analyze_delta_from_trades(trades):
 
     if buy_vol > sell_vol * 1.3:
         return "bullish"
+
     if sell_vol > buy_vol * 1.3:
         return "bearish"
 
@@ -188,12 +216,17 @@ def format_delta_text(delta_status: str) -> str:
 # ============================
 
 def compute_ema(values: List[float], period: int) -> Optional[float]:
-    if len(values) < period:
+    if not values or len(values) < period:
         return None
+
     k = 2 / (period + 1)
-    ema = values[0]
-    for v in values[1:]:
-        ema = v * k + ema * (1 - k)
+
+    # Стартовая EMA — среднее первых period значений
+    ema = sum(values[:period]) / period
+
+    for price in values[period:]:
+        ema = price * k + ema * (1 - k)
+
     return ema
 
 
@@ -213,18 +246,23 @@ def trend_score_from_closes(closes: List[float]) -> int:
 
     if ema20 > ema50 > ema100:
         bullish += 40
+
     if ema20 < ema50 < ema100:
         bearish += 40
 
-    slope = compute_change_percent(closes, 0, min(10, len(closes) - 1))
+    slope_idx = min(10, len(closes) - 1)
+    slope = compute_change_percent(closes, 0, slope_idx)
+
     if slope > 2.0:
         bullish += 30
     elif slope < -2.0:
         bearish += 30
 
     up, down = count_trend_bars(closes, lookback=12)
+
     if up > down + 3:
         bullish += 20
+
     if down > up + 3:
         bearish += 20
 
@@ -239,8 +277,11 @@ async def compute_trend_score(session, symbol: str) -> int:
     if not klines_15m or not klines_1h:
         return 50
 
-    closes_15m = [float(c[4]) for c in klines_15m][::-1]
-    closes_1h = [float(c[4]) for c in klines_1h][::-1]
+    try:
+        closes_15m = [float(c[4]) for c in klines_15m if len(c) > 4][::-1]
+        closes_1h = [float(c[4]) for c in klines_1h if len(c) > 4][::-1]
+    except Exception:
+        return 50
 
     ts15 = trend_score_from_closes(closes_15m)
     ts1h = trend_score_from_closes(closes_1h)
@@ -261,10 +302,12 @@ def compute_risk_score(
     delta_status: str,
     trend_score: int
 ) -> int:
+
     risk = 50
 
     if len(closes_1m) > 5:
         vol_5m = abs(compute_change_percent(closes_1m, 0, 5))
+
         if vol_5m > 3.0:
             risk += 10
         elif vol_5m < 1.0:

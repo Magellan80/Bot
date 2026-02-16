@@ -125,11 +125,11 @@ async def safe_send_message(chat_id: int, text: str):
             return
 
 
-async def safe_send_photo(chat_id: int, photo):
+async def safe_send_photo(chat_id: int, photo, caption: str | None = None):
     delay = 1
     while True:
         try:
-            await bot.send_photo(chat_id, photo)
+            await bot.send_photo(chat_id, photo, caption=caption)
             return
         except TelegramRetryAfter as e:
             await asyncio.sleep(e.retry_after)
@@ -262,8 +262,8 @@ async def scanner_watchdog():
             async def send_text(text):
                 await safe_send_message(ADMIN_ID, text)
 
-            async def send_photo(photo):
-                await safe_send_photo(ADMIN_ID, photo)
+            async def send_photo(photo, caption=None):
+                await safe_send_photo(ADMIN_ID, photo, caption)
 
             # TRADING MODE
             if bot_mode == "TRADING":
@@ -539,8 +539,8 @@ async def cb_start_scanner(call: CallbackQuery):
     async def send_text(text):
         await safe_send_message(ADMIN_ID, text)
 
-    async def send_photo(photo):
-        await safe_send_photo(ADMIN_ID, photo)
+    async def send_photo(photo, caption=None):
+        await safe_send_photo(ADMIN_ID, photo, caption)
 
     # TRADING MODE
     if bot_mode == "TRADING":
@@ -693,12 +693,18 @@ async def main():
     # watchdog сканера
     scanner_watchdog_task = asyncio.create_task(scanner_watchdog())
 
-    # supervisor для торговых задач (self‑healing)
+    # supervisor для торговых задач (self-healing)
     trading_supervisor_task = asyncio.create_task(trading_tasks_supervisor())
 
-    # Telegram polling с self‑healing
-    await run_polling_forever()
+    try:
+        # Telegram polling с self-healing
+        await run_polling_forever()
 
+    finally:
+        print("Завершение работы бота...")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+        # Закрываем брокерскую сессию если есть
+        if engine and engine.broker:
+            await engine.broker.close()
+
+        print("Broker session closed.")
