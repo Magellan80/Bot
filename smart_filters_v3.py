@@ -154,20 +154,33 @@ def _detect_htf_momentum_divergence(
     rsi_period: int = 14,
 ) -> Dict[str, Optional[Any]]:
     """
-    Простая HTF-momentum divergence:
+    HTF momentum divergence:
     - bullish: цена делает более низкий минимум, RSI делает более высокий минимум
     - bearish: цена делает более высокий максимум, RSI делает более низкий максимум
     strength: 1..3 (насколько выражена дивергенция)
+    Ожидает closes в порядке oldest → newest
     """
+
     if len(closes) < max(lookback, rsi_period) + 2:
         return {"divergence": None, "strength": None}
 
-    closes = closes[:lookback]
-    rsi = _compute_rsi(closes, period=rsi_period)
+    # Берём последние lookback свечей (самые свежие)
+    closes_segment = closes[-lookback:]  # oldest → newest
 
-    window = min(10, len(closes))
-    segment_prices = closes[:window]
-    segment_rsi = rsi[:window]
+    # RSI считаем на нормальном порядке
+    rsi = _compute_rsi(closes_segment, period=rsi_period)
+
+    if len(rsi) < 3:
+        return {"divergence": None, "strength": None}
+
+    # Для pivot логики разворачиваем (newest → oldest)
+    closes_rev = closes_segment[::-1]
+    rsi_rev = rsi[::-1]
+
+    window = min(10, len(closes_rev))
+
+    segment_prices = closes_rev[:window]
+    segment_rsi = rsi_rev[:window]
 
     price_last = segment_prices[0]
     price_prev = segment_prices[1]
@@ -200,6 +213,7 @@ def _detect_htf_momentum_divergence(
     rsi_move = _rel(rsi_last, rsi_prev)
 
     diff = abs(rsi_move - price_move)
+
     if diff > 3:
         strength = 3
     elif diff > 1.5:
@@ -881,23 +895,34 @@ class SmartFilters:
                 },
             }
         total = len(filters_ok)
-        good = sum(1 for v in filters_ok.values() if v)
-        filters_ok_ratio = good / total if total > 0 else 0.0
+        good = sum(1 for v in filters_ok.values() if v)        
+
+        raw_ratio = good / total if total > 0 else 0.0
+
+        # Мягкая нормализация (чтобы 0.5 не убивал сигнал)
+        if raw_ratio >= 0.5:
+            filters_ok_ratio = 0.5 + (raw_ratio - 0.5) * 0.8
+        else:
+            filters_ok_ratio = raw_ratio * 0.9
 
         regime_strength = symbol_regime.get("strength", 0.5)
+
+        regime_strength = max(0.0, min(1.0, regime_strength))
+
         regime = symbol_regime.get("regime", "range")
 
         regime_bonus = 0.0
+
         if regime == "trend":
-            regime_bonus = 0.1 * regime_strength
+            regime_bonus = 0.12 * regime_strength
+        elif regime == "expansion":
+            regime_bonus = 0.08 * regime_strength
+        elif regime == "squeeze":
+            regime_bonus = 0.07 * regime_strength
         elif regime == "range":
             regime_bonus = 0.05 * regime_strength
-        elif regime == "squeeze":
-            regime_bonus = 0.08 * regime_strength
-        elif regime == "expansion":
-            regime_bonus = 0.1 * regime_strength
         elif regime == "chaos":
-            regime_bonus = -0.1 * regime_strength
+            regime_bonus = -0.12 * regime_strength
 
         market_risk = market_ctx.get("risk", 0.5)
         market_regime = market_ctx.get("market_regime", "neutral")
@@ -1106,18 +1131,30 @@ class SmartFilters:
                         elif profile_strength >= 3:
                             volume_profile_bonus -= 0.06
 
+        # ===== Суммарный HTF-блок (ограниченный) =====
+        htf_total_bonus = (
+            htf_trend_bonus
+            + htf_structure_bonus
+            + htf_momentum_bonus
+            + volume_profile_bonus
+            + trend_consistency_bonus
+            + htf_trend_structure_alignment_bonus
+            + htf_trend_mom_fusion_bonus
+        )
+
+        # Ограничение суммарного влияния HTF
+        if htf_total_bonus > 0.20:
+            htf_total_bonus = 0.20
+        elif htf_total_bonus < -0.20:
+            htf_total_bonus = -0.20
+
+        # ===== Финальный расчёт confidence =====
         confidence = filters_ok_ratio
         confidence += regime_bonus
         confidence += market_bonus
         confidence -= risk_penalty
         confidence += memory_bonus
-        confidence += htf_trend_bonus
-        confidence += htf_structure_bonus
-        confidence += htf_momentum_bonus
-        confidence += volume_profile_bonus
-        confidence += trend_consistency_bonus
-        confidence += htf_trend_structure_alignment_bonus
-        confidence += htf_trend_mom_fusion_bonus
+        confidence += htf_total_bonus
 
         factor_boost = self._get_factor_boost()
         confidence *= factor_boost
@@ -1284,106 +1321,6 @@ class SmartFilters:
             else:
                 final_rating *= 0.95
 
-        # HTF-тренд
-        htf_trend_score = _compute_htf_trend_score(trend_15m, trend_1h, trend_4h)
-        if htf_trend_score != 0:
-            htf_abs = abs(htf_trend_score)
-            same_direction_trend = (direction_side == "bullish" and htf_trend_score > 0) or (
-                direction_side == "bearish" and htf_trend_score < 0
-            )
-            if same_direction_trend:
-                if htf_abs > 2.0:
-                    final_rating *= 1.07
-                elif htf_abs > 1.0:
-                    final_rating *= 1.03
-            else:
-                if htf_abs > 2.0:
-                    final_rating *= 0.95  # v2.1: было 0.93
-                elif htf_abs > 1.0:
-                    final_rating *= 0.98  # v2.1: было 0.97
-
-        # HTF-structure
-        htf_structure = htf_structure_ctx.get("structure")
-        htf_strength = htf_structure_ctx.get("strength")
-        if htf_structure in ("bullish", "bearish") and isinstance(htf_strength, int):
-            same_direction_struct = (direction_side == "bullish" and htf_structure == "bullish") or (
-                direction_side == "bearish" and htf_structure == "bearish"
-            )
-            if same_direction_struct:
-                if htf_strength == 2:
-                    final_rating *= 1.02
-                elif htf_strength == 3:
-                    final_rating *= 1.03
-                elif htf_strength == 4:
-                    final_rating *= 1.05
-                elif htf_strength >= 5:
-                    final_rating *= 1.06
-            else:
-                if htf_strength == 2:
-                    final_rating *= 0.98
-                elif htf_strength == 3:
-                    final_rating *= 0.97
-                elif htf_strength == 4:
-                    final_rating *= 0.97  # v2.1: было 0.95
-                elif htf_strength >= 5:
-                    final_rating *= 0.96  # v2.1: было 0.94
-
-        # HTF-momentum
-        htf_mom_div = htf_momentum_ctx.get("divergence")
-        htf_mom_strength = htf_momentum_ctx.get("strength")
-        if htf_mom_div in ("bullish", "bearish") and isinstance(htf_mom_strength, int):
-            same_direction_mom = (direction_side == "bullish" and htf_mom_div == "bullish") or (
-                direction_side == "bearish" and htf_mom_div == "bearish"
-            )
-            if same_direction_mom:
-                if htf_mom_strength == 1:
-                    final_rating *= 1.02
-                elif htf_mom_strength == 2:
-                    final_rating *= 1.03
-                elif htf_mom_strength >= 3:
-                    final_rating *= 1.05
-            else:
-                if htf_mom_strength == 1:
-                    final_rating *= 0.98
-                elif htf_mom_strength == 2:
-                    final_rating *= 0.97
-                elif htf_mom_strength >= 3:
-                    final_rating *= 0.95
-
-        # Volume profile
-        profile_bias = volume_profile_ctx.get("profile_bias")
-        profile_strength = volume_profile_ctx.get("strength")
-        if profile_bias in ("support", "resistance") and isinstance(profile_strength, int):
-            if profile_bias == "support":
-                if direction_side == "bullish":
-                    if profile_strength == 1:
-                        final_rating *= 1.02
-                    elif profile_strength == 2:
-                        final_rating *= 1.03
-                    elif profile_strength >= 3:
-                        final_rating *= 1.05
-                else:
-                    if profile_strength == 1:
-                        final_rating *= 0.98
-                    elif profile_strength == 2:
-                        final_rating *= 0.97
-                    elif profile_strength >= 3:
-                        final_rating *= 0.95
-            elif profile_bias == "resistance":
-                if direction_side == "bearish":
-                    if profile_strength == 1:
-                        final_rating *= 1.02
-                    elif profile_strength == 2:
-                        final_rating *= 1.03
-                    elif profile_strength >= 3:
-                        final_rating *= 1.05
-                else:
-                    if profile_strength == 1:
-                        final_rating *= 0.98
-                    elif profile_strength == 2:
-                        final_rating *= 0.97
-                    elif profile_strength >= 3:
-                        final_rating *= 0.95
 
         final_rating_int = int(round(final_rating))
 

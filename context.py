@@ -231,48 +231,82 @@ def compute_ema(values: List[float], period: int) -> Optional[float]:
 
 
 def trend_score_from_closes(closes: List[float]) -> int:
-    if len(closes) < 30:
+    if len(closes) < 100:
         return 50
 
-    ema20 = compute_ema(closes, 20)
-    ema50 = compute_ema(closes, 50)
-    ema100 = compute_ema(closes, 100)
+    # newest -> oldest
+    current_price = closes[0]
+
+    # для EMA нужно oldest -> newest
+    closes_for_ema = closes[::-1]
+
+    ema20 = compute_ema(closes_for_ema, 20)
+    ema50 = compute_ema(closes_for_ema, 50)
+    ema100 = compute_ema(closes_for_ema, 100)
 
     if ema20 is None or ema50 is None or ema100 is None:
         return 50
 
-    bullish = 0
-    bearish = 0
+    bullish = 0.0
+    bearish = 0.0
 
+    # =============================
+    # 1️⃣ EMA alignment
+    # =============================
     if ema20 > ema50 > ema100:
-        bullish += 40
+        # сила расхождения
+        d1 = abs(ema20 - ema50) / ema50 * 100
+        d2 = abs(ema50 - ema100) / ema100 * 100
+        strength = min(40, (d1 + d2) * 20)
+        bullish += strength
 
-    if ema20 < ema50 < ema100:
-        bearish += 40
+    elif ema20 < ema50 < ema100:
+        d1 = abs(ema20 - ema50) / ema50 * 100
+        d2 = abs(ema50 - ema100) / ema100 * 100
+        strength = min(40, (d1 + d2) * 20)
+        bearish += strength
 
+    # =============================
+    # 2️⃣ Цена относительно EMA20
+    # =============================
+    price_distance = (current_price - ema20) / ema20 * 100
+
+    if price_distance > 0.4:
+        bullish += min(15, price_distance * 5)
+
+    elif price_distance < -0.4:
+        bearish += min(15, abs(price_distance) * 5)
+
+    # =============================
+    # 3️⃣ Slope (импульс)
+    # =============================
     slope_idx = min(10, len(closes) - 1)
     slope = compute_change_percent(closes, 0, slope_idx)
 
     if slope > 2.0:
-        bullish += 30
-    elif slope < -2.0:
-        bearish += 30
+        bullish += min(25, slope * 6)
 
+    elif slope < -2.0:
+        bearish += min(25, abs(slope) * 6)
+
+    # =============================
+    # 4️⃣ Структура свечей
+    # =============================
     up, down = count_trend_bars(closes, lookback=12)
 
-    if up > down + 3:
-        bullish += 20
+    if up > down:
+        bullish += min(15, (up - down) * 2)
 
-    if down > up + 3:
-        bearish += 20
+    elif down > up:
+        bearish += min(15, (down - up) * 2)
 
     raw = bullish - bearish
     return clamp(50 + raw)
 
 
 async def compute_trend_score(session, symbol: str) -> int:
-    klines_15m = await fetch_klines(session, symbol, interval="15", limit=96)
-    klines_1h = await fetch_klines(session, symbol, interval="60", limit=96)
+    klines_15m = await fetch_klines(session, symbol, interval="15", limit=120)
+    klines_1h = await fetch_klines(session, symbol, interval="60", limit=120)
 
     if not klines_15m or not klines_1h:
         return 50
@@ -319,11 +353,13 @@ def compute_risk_score(
         risk -= 5
 
     f_bias = funding_bias(funding_rate)
-    if f_bias in ("bearish", "bullish"):
+    if f_bias == "bearish" and trend_score > 70:
+        risk += 5
+    elif f_bias == "bullish" and trend_score < 30:
         risk += 5
 
     if liq_status in ("long_spike", "short_spike"):
-        risk += 15
+        risk += 10
     elif liq_status == "mixed":
         risk += 5
 
@@ -333,7 +369,7 @@ def compute_risk_score(
     if delta_status in ("bullish", "bearish"):
         risk += 5
 
-    if trend_score > 80 or trend_score < 20:
-        risk += 5
+    if 40 <= trend_score <= 60:
+        risk += 5  # флет опаснее
 
     return clamp(risk)

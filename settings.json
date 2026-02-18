@@ -1,6 +1,6 @@
 {
     "mode": "A",
-    "min_score": 25,
+    "min_score": 55,
     "strictness_level": "soft",
     "reversal_requires_state": false,
     "reversal_state_ttl_sec": 3600,

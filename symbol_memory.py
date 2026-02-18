@@ -1,10 +1,13 @@
 import json
 import os
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 MEMORY_FILE = "symbol_memory.json"
 MAX_HISTORY = 200
+
+# 🔹 EMA smoothing parameter
+CONFIDENCE_ALPHA = 0.65
 
 
 def _load_raw() -> Dict[str, Any]:
@@ -13,14 +16,12 @@ def _load_raw() -> Dict[str, Any]:
     try:
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # v2.1: Валидация что это dict
             if not isinstance(data, dict):
                 print(f"⚠️ [SYMBOL_MEMORY] Invalid data type in {MEMORY_FILE}, resetting")
                 return {}
             return data
     except json.JSONDecodeError as e:
         print(f"⚠️ [SYMBOL_MEMORY] Corrupted JSON in {MEMORY_FILE}: {e}")
-        # Создаём бэкап
         backup_file = f"{MEMORY_FILE}.corrupt.{int(time.time())}"
         import shutil
         shutil.copy(MEMORY_FILE, backup_file)
@@ -35,6 +36,42 @@ def _save_raw(data: Dict[str, Any]) -> None:
     with open(MEMORY_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
+
+# =========================================================
+# 🔹 CONFIDENCE EMA LOGIC (NEW)
+# =========================================================
+
+def smooth_confidence(symbol: str, new_confidence: float) -> float:
+    """
+    EMA smoothing for signal confidence.
+    Stored persistently per symbol.
+    """
+    data = _load_raw()
+    entry = data.get(symbol, {})
+
+    prev = entry.get("confidence_ema")
+
+    if prev is None:
+        smoothed = new_confidence
+    else:
+        smoothed = CONFIDENCE_ALPHA * new_confidence + (1 - CONFIDENCE_ALPHA) * prev
+
+    entry["confidence_ema"] = smoothed
+    data[symbol] = entry
+    _save_raw(data)
+
+    return smoothed
+
+
+def get_smoothed_confidence(symbol: str) -> Optional[float]:
+    data = _load_raw()
+    entry = data.get(symbol, {})
+    return entry.get("confidence_ema")
+
+
+# =========================================================
+# 🔹 BASIC MEMORY ACCESS
+# =========================================================
 
 def get_symbol_memory(symbol: str) -> Dict[str, Any]:
     data = _load_raw()
@@ -65,6 +102,10 @@ def clear_symbol_state(symbol: str) -> None:
         _save_raw(data)
 
 
+# =========================================================
+# 🔹 BEHAVIOR CLASSIFICATION
+# =========================================================
+
 def _classify_behavior(stats: Dict[str, Any]) -> Dict[str, Any]:
     pump_cnt = stats.get("pump_cnt", 0)
     dump_cnt = stats.get("dump_cnt", 0)
@@ -87,7 +128,7 @@ def _classify_behavior(stats: Dict[str, Any]) -> Dict[str, Any]:
         regime = "chaotic"
     if abs(avg_vol) < 1 and avg_atr < 0.3:
         regime = "stable"
-    if abs(avg_vol) > 2 and abs(avg_vol) < 5:
+    if 2 < abs(avg_vol) < 5:
         regime = "trending"
 
     return {
@@ -100,6 +141,10 @@ def _classify_behavior(stats: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+# =========================================================
+# 🔹 MAIN UPDATE FUNCTION
+# =========================================================
+
 def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any]:
     """
     snapshot:
@@ -111,6 +156,7 @@ def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any
         "btc_factor": float
       }
     """
+
     data = _load_raw()
     now = time.time()
 
@@ -143,6 +189,7 @@ def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any
         hist = hist[-MAX_HISTORY:]
 
     stats["total_signals"] = stats.get("total_signals", 0) + 1
+
     if snapshot.get("is_pump"):
         stats["pump_cnt"] = stats.get("pump_cnt", 0) + 1
     if snapshot.get("is_dump"):
@@ -162,8 +209,10 @@ def update_symbol_memory(symbol: str, snapshot: Dict[str, Any]) -> Dict[str, Any
     entry["history"] = hist
     entry["stats"] = stats
     entry["profile"] = profile
+
     if state:
         entry["state"] = state
+
     entry["updated_ts"] = now
 
     data[symbol] = entry

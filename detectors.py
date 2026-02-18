@@ -1,6 +1,6 @@
 # detectors.py
-# PRO MULTI-LAYER SCORING MODEL v6
-# 100% FULL BACKWARD COMPATIBILITY WITH SCREENER
+# PRODUCTION STABLE DETECTOR ENGINE v5
+# Совместим с screener V10.2 router
 
 import numpy as np
 
@@ -9,9 +9,9 @@ import numpy as np
 # UTILITIES
 # ============================================================
 
-def rsi(closes, period=14):
+def _rsi(closes, period=14):
     if len(closes) < period + 1:
-        return 50
+        return 50.0
 
     deltas = np.diff(closes)
     gains = np.where(deltas > 0, deltas, 0)
@@ -21,15 +21,15 @@ def rsi(closes, period=14):
     avg_loss = np.mean(losses[-period:])
 
     if avg_loss == 0:
-        return 100
+        return 100.0
 
     rs = avg_gain / avg_loss
     return 100 - (100 / (1 + rs))
 
 
-def atr(highs, lows, closes, period=14):
+def _atr(highs, lows, closes, period=14):
     if len(closes) < period + 1:
-        return 0
+        return 0.0
 
     trs = []
     for i in range(1, len(closes)):
@@ -40,129 +40,196 @@ def atr(highs, lows, closes, period=14):
         )
         trs.append(tr)
 
-    return np.mean(trs[-period:])
+    return float(np.mean(trs[-period:]))
 
 
 # ============================================================
-# CORE ENGINE
+# MAIN CLASS
 # ============================================================
 
-def _multi_layer_engine(closes, highs, lows, volume, btc_regime="ranging"):
+class Detector:
+    """
+    Production-safe detector.
+    Не фильтрует по min_score внутри.
+    Всегда возвращает:
 
-    closes = np.array(closes)
-    highs = np.array(highs)
-    lows = np.array(lows)
-    volume = np.array(volume)
+    {
+        "reversal": str | None,
+        "rating": int
+    }
+    """
 
-    if len(closes) < 20:
-        return 0, None
+    # ========================================================
+    # REVERSAL
+    # ========================================================
 
-    last = closes[-1]
+    def analyze_reversal(
+        self,
+        closes,
+        highs,
+        lows,
+        volumes,
+        htf_trend_1h=0,
+        htf_trend_4h=0,
+        structure_1h=None,
+        structure_4h=None,
+        event_1h=None,
+        event_4h=None,
+        market_regime="neutral",
+        asset_class="mid",
+        min_score=0,
+    ):
 
-    structure_score = 0
-    exhaustion_score = 0
-    flow_score = 0
-    htf_score = 0
+        closes = np.array(closes)
+        highs = np.array(highs)
+        lows = np.array(lows)
+        volumes = np.array(volumes)
 
-    direction_bias = 0
+        if len(closes) < 30:
+            return {"reversal": None, "rating": 0}
 
-    # ================= STRUCTURE =================
+        rsi = _rsi(closes)
+        atr = _atr(highs, lows, closes)
 
-    if closes[-1] > closes[-3] > closes[-5]:
-        structure_score += 15
-        direction_bias += 1
-
-    if closes[-1] < closes[-3] < closes[-5]:
-        structure_score += 15
-        direction_bias -= 1
-
-    if last > np.max(highs[-10:-1]):
-        structure_score += 10
-        direction_bias += 1
-
-    if last < np.min(lows[-10:-1]):
-        structure_score += 10
-        direction_bias -= 1
-
-    structure_score = min(structure_score, 30)
-
-    # ================= EXHAUSTION =================
-
-    rsi_value = rsi(closes)
-    atr_value = atr(highs, lows, closes)
-
-    if rsi_value > 70:
-        exhaustion_score += 15
-        direction_bias -= 1
-
-    if rsi_value < 30:
-        exhaustion_score += 15
-        direction_bias += 1
-
-    if atr_value > 0 and (highs[-1] - lows[-1]) > atr_value * 1.5:
-        exhaustion_score += 10
-
-    exhaustion_score = min(exhaustion_score, 25)
-
-    # ================= FLOW =================
-
-    avg_vol = np.mean(volume[-20:])
-    if volume[-1] > avg_vol * 1.8:
-        flow_score += 15
-
-    flow_score = min(flow_score, 25)
-
-    # ================= BTC REGIME =================
-
-    if btc_regime == "trend":
-        htf_score += 10
-    elif btc_regime == "ranging":
-        htf_score += 5
-
-    htf_score = min(htf_score, 20)
-
-    total = structure_score + exhaustion_score + flow_score + htf_score
-    total = min(total, 100)
-
-    if direction_bias > 0:
-        direction = "long"
-    elif direction_bias < 0:
-        direction = "short"
-    else:
+        rating = 0
         direction = None
 
-    return int(total), direction
+        # 1️⃣ RSI exhaustion
+        if rsi > 72:
+            rating += 25
+            direction = "bearish"
 
+        if rsi < 28:
+            rating += 25
+            direction = "bullish"
 
-# ============================================================
-# WRAPPERS (EXACT SIGNATURE MATCH FOR SCREENER)
-# ============================================================
+        # 2️⃣ Impulse candle
+        recent_range = highs[-1] - lows[-1]
+        if atr > 0 and recent_range > atr * 1.6:
+            rating += 15
 
-def detect_big_pump(closes, highs, lows, volume, btc_regime="ranging"):
-    rating, direction = _multi_layer_engine(closes, highs, lows, volume, btc_regime)
-    if direction == "long":
-        return rating, direction
-    return 0, None
+        # 3️⃣ Volume spike
+        avg_vol = np.mean(volumes[-20:])
+        if volumes[-1] > avg_vol * 1.8:
+            rating += 15
 
+        # 4️⃣ HTF conflict bonus
+        if direction == "bearish" and (htf_trend_1h > 0 or htf_trend_4h > 0):
+            rating += 10
 
-def detect_big_dump(closes, highs, lows, volume, btc_regime="ranging"):
-    rating, direction = _multi_layer_engine(closes, highs, lows, volume, btc_regime)
-    if direction == "short":
-        return rating, direction
-    return 0, None
+        if direction == "bullish" and (htf_trend_1h < 0 or htf_trend_4h < 0):
+            rating += 10
 
+        # 5️⃣ Regime normalization
+        if market_regime == "high_vol":
+            rating *= 0.95
 
-def detect_reversal(closes, highs, lows, volume, btc_regime="ranging"):
-    return _multi_layer_engine(closes, highs, lows, volume, btc_regime)
+        if asset_class == "major":
+            rating *= 1.03
 
+        rating = int(max(0, min(rating, 100)))
 
-def detect_pump_reversal(closes, highs, lows, volume, btc_regime="ranging"):
-    return _multi_layer_engine(closes, highs, lows, volume, btc_regime)
+        return {
+            "reversal": direction,
+            "rating": rating
+        }
 
+    # ========================================================
+    # CONTINUATION
+    # ========================================================
 
-def adjust_rating_with_context(rating, context=None):
-    return rating
+    def analyze_continuation(
+        self,
+        closes,
+        highs,
+        lows,
+        volumes,
+        trend_1h=0,
+        trend_4h=0,
+        asset_class="mid",
+        market_regime="neutral",
+        min_score=0,
+    ):
 
+        closes = np.array(closes)
+        highs = np.array(highs)
+        lows = np.array(lows)
+        volumes = np.array(volumes)
 
-def detector(closes, highs, lows, volume, btc_regime="ranging"):
-    return _multi_layer_engine(closes, highs, lows, volume, btc_regime)
+        if len(closes) < 30:
+            return {"direction": None, "rating": 0}
+
+        rating = 0
+        direction = None
+
+        trend_sum = trend_1h + trend_4h
+
+        # 1️⃣ HTF alignment
+        if trend_sum >= 2:
+            rating += 30
+            direction = "bullish"
+
+        if trend_sum <= -2:
+            rating += 30
+            direction = "bearish"
+
+        # 2️⃣ Breakout
+        if closes[-1] > max(highs[-10:-1]):
+            rating += 20
+
+        if closes[-1] < min(lows[-10:-1]):
+            rating += 20
+
+        # 3️⃣ Volume confirmation
+        avg_vol = np.mean(volumes[-20:])
+        if volumes[-1] > avg_vol * 1.5:
+            rating += 15
+
+        # 4️⃣ Regime multiplier
+        if market_regime == "trending":
+            rating *= 1.05
+
+        if asset_class == "major":
+            rating *= 1.02
+
+        rating = int(max(0, min(rating, 100)))
+
+        return {
+            "direction": direction,
+            "rating": rating
+        }
+
+    # ========================================================
+    # HABR (lightweight scoring only)
+    # ========================================================
+
+    def analyze_habr(
+        self,
+        closes,
+        highs,
+        lows,
+        volumes
+    ):
+        """
+        Не блокирующий модуль.
+        Возвращает дополнительный скоринг.
+        """
+
+        closes = np.array(closes)
+        volumes = np.array(volumes)
+
+        if len(closes) < 20:
+            return {"score": 0}
+
+        rating = 0
+
+        momentum = closes[-1] - closes[-5]
+        avg_vol = np.mean(volumes[-20:])
+
+        if momentum > 0:
+            rating += 5
+
+        if volumes[-1] > avg_vol * 1.3:
+            rating += 5
+
+        return {"score": int(rating)}
