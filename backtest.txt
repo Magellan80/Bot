@@ -1,0 +1,1867 @@
+C:\Users\Win10_Game_OS\Desktop\Bot>python historical_downloader.py
+
+==============================
+Symbol: BTCUSDT
+==============================
+
+[Binance] Downloading BTCUSDT 1m ...
+[Binance] BTCUSDT 1m: 1000/5000 (20.0%)
+[Binance] BTCUSDT 1m: 2000/5000 (40.0%)
+[Binance] BTCUSDT 1m: 3000/5000 (60.0%)
+[Binance] BTCUSDT 1m: 4000/5000 (80.0%)
+[Binance] BTCUSDT 1m: 5000/5000 (100.0%)
+[Binance] BTCUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved BTCUSDT 1m → data\binance\BTCUSDT\1m.json, data\binance\BTCUSDT\1m.csv
+
+[Bybit] Downloading BTCUSDT 1m ...
+[Bybit] BTCUSDT 1m: 1000/5000 (20.0%)
+[Bybit] BTCUSDT 1m: 2000/5000 (40.0%)
+[Bybit] BTCUSDT 1m: 3000/5000 (60.0%)
+[Bybit] BTCUSDT 1m: 4000/5000 (80.0%)
+[Bybit] BTCUSDT 1m: 5000/5000 (100.0%)
+[Bybit] BTCUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved BTCUSDT 1m → data\bybit\BTCUSDT\1m.json, data\bybit\BTCUSDT\1m.csv
+
+[Binance] Downloading BTCUSDT 5m ...
+[Binance] BTCUSDT 5m: 1000/5000 (20.0%)
+[Binance] BTCUSDT 5m: 2000/5000 (40.0%)
+[Binance] BTCUSDT 5m: 3000/5000 (60.0%)
+[Binance] BTCUSDT 5m: 4000/5000 (80.0%)
+[Binance] BTCUSDT 5m: 5000/5000 (100.0%)
+[Binance] BTCUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved BTCUSDT 5m → data\binance\BTCUSDT\5m.json, data\binance\BTCUSDT\5m.csv
+
+[Bybit] Downloading BTCUSDT 5m ...
+[Bybit] BTCUSDT 5m: 1000/5000 (20.0%)
+[Bybit] BTCUSDT 5m: 2000/5000 (40.0%)
+[Bybit] BTCUSDT 5m: 3000/5000 (60.0%)
+[Bybit] BTCUSDT 5m: 4000/5000 (80.0%)
+[Bybit] BTCUSDT 5m: 5000/5000 (100.0%)
+[Bybit] BTCUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved BTCUSDT 5m → data\bybit\BTCUSDT\5m.json, data\bybit\BTCUSDT\5m.csv
+
+[Binance] Downloading BTCUSDT 15m ...
+[Binance] BTCUSDT 15m: 1000/5000 (20.0%)
+[Binance] BTCUSDT 15m: 2000/5000 (40.0%)
+[Binance] BTCUSDT 15m: 3000/5000 (60.0%)
+[Binance] BTCUSDT 15m: 4000/5000 (80.0%)
+[Binance] BTCUSDT 15m: 5000/5000 (100.0%)
+[Binance] BTCUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved BTCUSDT 15m → data\binance\BTCUSDT\15m.json, data\binance\BTCUSDT\15m.csv
+
+[Bybit] Downloading BTCUSDT 15m ...
+[Bybit] BTCUSDT 15m: 1000/5000 (20.0%)
+[Bybit] BTCUSDT 15m: 2000/5000 (40.0%)
+[Bybit] BTCUSDT 15m: 3000/5000 (60.0%)
+[Bybit] BTCUSDT 15m: 4000/5000 (80.0%)
+[Bybit] BTCUSDT 15m: 5000/5000 (100.0%)
+[Bybit] BTCUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved BTCUSDT 15m → data\bybit\BTCUSDT\15m.json, data\bybit\BTCUSDT\15m.csv
+
+[Binance] Downloading BTCUSDT 1h ...
+[Binance] BTCUSDT 1h: 1000/5000 (20.0%)
+[Binance] BTCUSDT 1h: 2000/5000 (40.0%)
+[Binance] BTCUSDT 1h: 3000/5000 (60.0%)
+[Binance] BTCUSDT 1h: 4000/5000 (80.0%)
+[Binance] BTCUSDT 1h: 5000/5000 (100.0%)
+[Binance] BTCUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved BTCUSDT 1h → data\binance\BTCUSDT\1h.json, data\binance\BTCUSDT\1h.csv
+
+[Bybit] Downloading BTCUSDT 1h ...
+[Bybit] BTCUSDT 1h: 1000/5000 (20.0%)
+[Bybit] BTCUSDT 1h: 2000/5000 (40.0%)
+[Bybit] BTCUSDT 1h: 3000/5000 (60.0%)
+[Bybit] BTCUSDT 1h: 4000/5000 (80.0%)
+[Bybit] BTCUSDT 1h: 5000/5000 (100.0%)
+[Bybit] BTCUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved BTCUSDT 1h → data\bybit\BTCUSDT\1h.json, data\bybit\BTCUSDT\1h.csv
+
+[Binance] Downloading BTCUSDT 4h ...
+[Binance] BTCUSDT 4h: 1000/5000 (20.0%)
+[Binance] BTCUSDT 4h: 2000/5000 (40.0%)
+[Binance] BTCUSDT 4h: 3000/5000 (60.0%)
+[Binance] BTCUSDT 4h: 4000/5000 (80.0%)
+[Binance] BTCUSDT 4h: 5000/5000 (100.0%)
+[Binance] BTCUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved BTCUSDT 4h → data\binance\BTCUSDT\4h.json, data\binance\BTCUSDT\4h.csv
+
+[Bybit] Downloading BTCUSDT 4h ...
+[Bybit] BTCUSDT 4h: 1000/5000 (20.0%)
+[Bybit] BTCUSDT 4h: 2000/5000 (40.0%)
+[Bybit] BTCUSDT 4h: 3000/5000 (60.0%)
+[Bybit] BTCUSDT 4h: 4000/5000 (80.0%)
+[Bybit] BTCUSDT 4h: 5000/5000 (100.0%)
+[Bybit] BTCUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved BTCUSDT 4h → data\bybit\BTCUSDT\4h.json, data\bybit\BTCUSDT\4h.csv
+
+==============================
+Symbol: ETHUSDT
+==============================
+
+[Binance] Downloading ETHUSDT 1m ...
+[Binance] ETHUSDT 1m: 1000/5000 (20.0%)
+[Binance] ETHUSDT 1m: 2000/5000 (40.0%)
+[Binance] ETHUSDT 1m: 3000/5000 (60.0%)
+[Binance] ETHUSDT 1m: 4000/5000 (80.0%)
+[Binance] ETHUSDT 1m: 5000/5000 (100.0%)
+[Binance] ETHUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved ETHUSDT 1m → data\binance\ETHUSDT\1m.json, data\binance\ETHUSDT\1m.csv
+
+[Bybit] Downloading ETHUSDT 1m ...
+[Bybit] ETHUSDT 1m: 1000/5000 (20.0%)
+[Bybit] ETHUSDT 1m: 2000/5000 (40.0%)
+[Bybit] ETHUSDT 1m: 3000/5000 (60.0%)
+[Bybit] ETHUSDT 1m: 4000/5000 (80.0%)
+[Bybit] ETHUSDT 1m: 5000/5000 (100.0%)
+[Bybit] ETHUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved ETHUSDT 1m → data\bybit\ETHUSDT\1m.json, data\bybit\ETHUSDT\1m.csv
+
+[Binance] Downloading ETHUSDT 5m ...
+[Binance] ETHUSDT 5m: 1000/5000 (20.0%)
+[Binance] ETHUSDT 5m: 2000/5000 (40.0%)
+[Binance] ETHUSDT 5m: 3000/5000 (60.0%)
+[Binance] ETHUSDT 5m: 4000/5000 (80.0%)
+[Binance] ETHUSDT 5m: 5000/5000 (100.0%)
+[Binance] ETHUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved ETHUSDT 5m → data\binance\ETHUSDT\5m.json, data\binance\ETHUSDT\5m.csv
+
+[Bybit] Downloading ETHUSDT 5m ...
+[Bybit] ETHUSDT 5m: 1000/5000 (20.0%)
+[Bybit] ETHUSDT 5m: 2000/5000 (40.0%)
+[Bybit] ETHUSDT 5m: 3000/5000 (60.0%)
+[Bybit] ETHUSDT 5m: 4000/5000 (80.0%)
+[Bybit] ETHUSDT 5m: 5000/5000 (100.0%)
+[Bybit] ETHUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved ETHUSDT 5m → data\bybit\ETHUSDT\5m.json, data\bybit\ETHUSDT\5m.csv
+
+[Binance] Downloading ETHUSDT 15m ...
+[Binance] ETHUSDT 15m: 1000/5000 (20.0%)
+[Binance] ETHUSDT 15m: 2000/5000 (40.0%)
+[Binance] ETHUSDT 15m: 3000/5000 (60.0%)
+[Binance] ETHUSDT 15m: 4000/5000 (80.0%)
+[Binance] ETHUSDT 15m: 5000/5000 (100.0%)
+[Binance] ETHUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved ETHUSDT 15m → data\binance\ETHUSDT\15m.json, data\binance\ETHUSDT\15m.csv
+
+[Bybit] Downloading ETHUSDT 15m ...
+[Bybit] ETHUSDT 15m: 1000/5000 (20.0%)
+[Bybit] ETHUSDT 15m: 2000/5000 (40.0%)
+[Bybit] ETHUSDT 15m: 3000/5000 (60.0%)
+[Bybit] ETHUSDT 15m: 4000/5000 (80.0%)
+[Bybit] ETHUSDT 15m: 5000/5000 (100.0%)
+[Bybit] ETHUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved ETHUSDT 15m → data\bybit\ETHUSDT\15m.json, data\bybit\ETHUSDT\15m.csv
+
+[Binance] Downloading ETHUSDT 1h ...
+[Binance] ETHUSDT 1h: 1000/5000 (20.0%)
+[Binance] ETHUSDT 1h: 2000/5000 (40.0%)
+[Binance] ETHUSDT 1h: 3000/5000 (60.0%)
+[Binance] ETHUSDT 1h: 4000/5000 (80.0%)
+[Binance] ETHUSDT 1h: 5000/5000 (100.0%)
+[Binance] ETHUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved ETHUSDT 1h → data\binance\ETHUSDT\1h.json, data\binance\ETHUSDT\1h.csv
+
+[Bybit] Downloading ETHUSDT 1h ...
+[Bybit] ETHUSDT 1h: 1000/5000 (20.0%)
+[Bybit] ETHUSDT 1h: 2000/5000 (40.0%)
+[Bybit] ETHUSDT 1h: 3000/5000 (60.0%)
+[Bybit] ETHUSDT 1h: 4000/5000 (80.0%)
+[Bybit] ETHUSDT 1h: 5000/5000 (100.0%)
+[Bybit] ETHUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved ETHUSDT 1h → data\bybit\ETHUSDT\1h.json, data\bybit\ETHUSDT\1h.csv
+
+[Binance] Downloading ETHUSDT 4h ...
+[Binance] ETHUSDT 4h: 1000/5000 (20.0%)
+[Binance] ETHUSDT 4h: 2000/5000 (40.0%)
+[Binance] ETHUSDT 4h: 3000/5000 (60.0%)
+[Binance] ETHUSDT 4h: 4000/5000 (80.0%)
+[Binance] ETHUSDT 4h: 5000/5000 (100.0%)
+[Binance] ETHUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved ETHUSDT 4h → data\binance\ETHUSDT\4h.json, data\binance\ETHUSDT\4h.csv
+
+[Bybit] Downloading ETHUSDT 4h ...
+[Bybit] ETHUSDT 4h: 1000/5000 (20.0%)
+[Bybit] ETHUSDT 4h: 2000/5000 (40.0%)
+[Bybit] ETHUSDT 4h: 3000/5000 (60.0%)
+[Bybit] ETHUSDT 4h: 4000/5000 (80.0%)
+[Bybit] ETHUSDT 4h: 5000/5000 (100.0%)
+[Bybit] ETHUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved ETHUSDT 4h → data\bybit\ETHUSDT\4h.json, data\bybit\ETHUSDT\4h.csv
+
+==============================
+Symbol: SOLUSDT
+==============================
+
+[Binance] Downloading SOLUSDT 1m ...
+[Binance] SOLUSDT 1m: 1000/5000 (20.0%)
+[Binance] SOLUSDT 1m: 2000/5000 (40.0%)
+[Binance] SOLUSDT 1m: 3000/5000 (60.0%)
+[Binance] SOLUSDT 1m: 4000/5000 (80.0%)
+[Binance] SOLUSDT 1m: 5000/5000 (100.0%)
+[Binance] SOLUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved SOLUSDT 1m → data\binance\SOLUSDT\1m.json, data\binance\SOLUSDT\1m.csv
+
+[Bybit] Downloading SOLUSDT 1m ...
+[Bybit] SOLUSDT 1m: 1000/5000 (20.0%)
+[Bybit] SOLUSDT 1m: 2000/5000 (40.0%)
+[Bybit] SOLUSDT 1m: 3000/5000 (60.0%)
+[Bybit] SOLUSDT 1m: 4000/5000 (80.0%)
+[Bybit] SOLUSDT 1m: 5000/5000 (100.0%)
+[Bybit] SOLUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved SOLUSDT 1m → data\bybit\SOLUSDT\1m.json, data\bybit\SOLUSDT\1m.csv
+
+[Binance] Downloading SOLUSDT 5m ...
+[Binance] SOLUSDT 5m: 1000/5000 (20.0%)
+[Binance] SOLUSDT 5m: 2000/5000 (40.0%)
+[Binance] SOLUSDT 5m: 3000/5000 (60.0%)
+[Binance] SOLUSDT 5m: 4000/5000 (80.0%)
+[Binance] SOLUSDT 5m: 5000/5000 (100.0%)
+[Binance] SOLUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved SOLUSDT 5m → data\binance\SOLUSDT\5m.json, data\binance\SOLUSDT\5m.csv
+
+[Bybit] Downloading SOLUSDT 5m ...
+[Bybit] SOLUSDT 5m: 1000/5000 (20.0%)
+[Bybit] SOLUSDT 5m: 2000/5000 (40.0%)
+[Bybit] SOLUSDT 5m: 3000/5000 (60.0%)
+[Bybit] SOLUSDT 5m: 4000/5000 (80.0%)
+[Bybit] SOLUSDT 5m: 5000/5000 (100.0%)
+[Bybit] SOLUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved SOLUSDT 5m → data\bybit\SOLUSDT\5m.json, data\bybit\SOLUSDT\5m.csv
+
+[Binance] Downloading SOLUSDT 15m ...
+[Binance] SOLUSDT 15m: 1000/5000 (20.0%)
+[Binance] SOLUSDT 15m: 2000/5000 (40.0%)
+[Binance] SOLUSDT 15m: 3000/5000 (60.0%)
+[Binance] SOLUSDT 15m: 4000/5000 (80.0%)
+[Binance] SOLUSDT 15m: 5000/5000 (100.0%)
+[Binance] SOLUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved SOLUSDT 15m → data\binance\SOLUSDT\15m.json, data\binance\SOLUSDT\15m.csv
+
+[Bybit] Downloading SOLUSDT 15m ...
+[Bybit] SOLUSDT 15m: 1000/5000 (20.0%)
+[Bybit] SOLUSDT 15m: 2000/5000 (40.0%)
+[Bybit] SOLUSDT 15m: 3000/5000 (60.0%)
+[Bybit] SOLUSDT 15m: 4000/5000 (80.0%)
+[Bybit] SOLUSDT 15m: 5000/5000 (100.0%)
+[Bybit] SOLUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved SOLUSDT 15m → data\bybit\SOLUSDT\15m.json, data\bybit\SOLUSDT\15m.csv
+
+[Binance] Downloading SOLUSDT 1h ...
+[Binance] SOLUSDT 1h: 1000/5000 (20.0%)
+[Binance] SOLUSDT 1h: 2000/5000 (40.0%)
+[Binance] SOLUSDT 1h: 3000/5000 (60.0%)
+[Binance] SOLUSDT 1h: 4000/5000 (80.0%)
+[Binance] SOLUSDT 1h: 5000/5000 (100.0%)
+[Binance] SOLUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved SOLUSDT 1h → data\binance\SOLUSDT\1h.json, data\binance\SOLUSDT\1h.csv
+
+[Bybit] Downloading SOLUSDT 1h ...
+[Bybit] SOLUSDT 1h: 1000/5000 (20.0%)
+[Bybit] SOLUSDT 1h: 2000/5000 (40.0%)
+[Bybit] SOLUSDT 1h: 3000/5000 (60.0%)
+[Bybit] SOLUSDT 1h: 4000/5000 (80.0%)
+[Bybit] SOLUSDT 1h: 5000/5000 (100.0%)
+[Bybit] SOLUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved SOLUSDT 1h → data\bybit\SOLUSDT\1h.json, data\bybit\SOLUSDT\1h.csv
+
+[Binance] Downloading SOLUSDT 4h ...
+[Binance] SOLUSDT 4h: 1000/5000 (20.0%)
+[Binance] SOLUSDT 4h: 2000/5000 (40.0%)
+[Binance] SOLUSDT 4h: 3000/5000 (60.0%)
+[Binance] SOLUSDT 4h: 4000/5000 (80.0%)
+[Binance] SOLUSDT 4h: 5000/5000 (100.0%)
+[Binance] SOLUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved SOLUSDT 4h → data\binance\SOLUSDT\4h.json, data\binance\SOLUSDT\4h.csv
+
+[Bybit] Downloading SOLUSDT 4h ...
+[Bybit] SOLUSDT 4h: 1000/5000 (20.0%)
+[Bybit] SOLUSDT 4h: 2000/5000 (40.0%)
+[Bybit] SOLUSDT 4h: 3000/5000 (60.0%)
+[Bybit] SOLUSDT 4h: 4000/5000 (80.0%)
+[Bybit] SOLUSDT 4h: 5000/5000 (100.0%)
+[Bybit] SOLUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved SOLUSDT 4h → data\bybit\SOLUSDT\4h.json, data\bybit\SOLUSDT\4h.csv
+
+==============================
+Symbol: XRPUSDT
+==============================
+
+[Binance] Downloading XRPUSDT 1m ...
+[Binance] XRPUSDT 1m: 1000/5000 (20.0%)
+[Binance] XRPUSDT 1m: 2000/5000 (40.0%)
+[Binance] XRPUSDT 1m: 3000/5000 (60.0%)
+[Binance] XRPUSDT 1m: 4000/5000 (80.0%)
+[Binance] XRPUSDT 1m: 5000/5000 (100.0%)
+[Binance] XRPUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved XRPUSDT 1m → data\binance\XRPUSDT\1m.json, data\binance\XRPUSDT\1m.csv
+
+[Bybit] Downloading XRPUSDT 1m ...
+[Bybit] XRPUSDT 1m: 1000/5000 (20.0%)
+[Bybit] XRPUSDT 1m: 2000/5000 (40.0%)
+[Bybit] XRPUSDT 1m: 3000/5000 (60.0%)
+[Bybit] XRPUSDT 1m: 4000/5000 (80.0%)
+[Bybit] XRPUSDT 1m: 5000/5000 (100.0%)
+[Bybit] XRPUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved XRPUSDT 1m → data\bybit\XRPUSDT\1m.json, data\bybit\XRPUSDT\1m.csv
+
+[Binance] Downloading XRPUSDT 5m ...
+[Binance] XRPUSDT 5m: 1000/5000 (20.0%)
+[Binance] XRPUSDT 5m: 2000/5000 (40.0%)
+[Binance] XRPUSDT 5m: 3000/5000 (60.0%)
+[Binance] XRPUSDT 5m: 4000/5000 (80.0%)
+[Binance] XRPUSDT 5m: 5000/5000 (100.0%)
+[Binance] XRPUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved XRPUSDT 5m → data\binance\XRPUSDT\5m.json, data\binance\XRPUSDT\5m.csv
+
+[Bybit] Downloading XRPUSDT 5m ...
+[Bybit] XRPUSDT 5m: 1000/5000 (20.0%)
+[Bybit] XRPUSDT 5m: 2000/5000 (40.0%)
+[Bybit] XRPUSDT 5m: 3000/5000 (60.0%)
+[Bybit] XRPUSDT 5m: 4000/5000 (80.0%)
+[Bybit] XRPUSDT 5m: 5000/5000 (100.0%)
+[Bybit] XRPUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved XRPUSDT 5m → data\bybit\XRPUSDT\5m.json, data\bybit\XRPUSDT\5m.csv
+
+[Binance] Downloading XRPUSDT 15m ...
+[Binance] XRPUSDT 15m: 1000/5000 (20.0%)
+[Binance] XRPUSDT 15m: 2000/5000 (40.0%)
+[Binance] XRPUSDT 15m: 3000/5000 (60.0%)
+[Binance] XRPUSDT 15m: 4000/5000 (80.0%)
+[Binance] XRPUSDT 15m: 5000/5000 (100.0%)
+[Binance] XRPUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved XRPUSDT 15m → data\binance\XRPUSDT\15m.json, data\binance\XRPUSDT\15m.csv
+
+[Bybit] Downloading XRPUSDT 15m ...
+Request error (https://api.bybit.com/v5/market/kline): HTTPSConnectionPool(host='api.bybit.com', port=443): Read timed out. (read timeout=10) | retry 1/5
+[Bybit] XRPUSDT 15m: 1000/5000 (20.0%)
+[Bybit] XRPUSDT 15m: 2000/5000 (40.0%)
+[Bybit] XRPUSDT 15m: 3000/5000 (60.0%)
+[Bybit] XRPUSDT 15m: 4000/5000 (80.0%)
+[Bybit] XRPUSDT 15m: 5000/5000 (100.0%)
+[Bybit] XRPUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved XRPUSDT 15m → data\bybit\XRPUSDT\15m.json, data\bybit\XRPUSDT\15m.csv
+
+[Binance] Downloading XRPUSDT 1h ...
+[Binance] XRPUSDT 1h: 1000/5000 (20.0%)
+[Binance] XRPUSDT 1h: 2000/5000 (40.0%)
+[Binance] XRPUSDT 1h: 3000/5000 (60.0%)
+[Binance] XRPUSDT 1h: 4000/5000 (80.0%)
+[Binance] XRPUSDT 1h: 5000/5000 (100.0%)
+[Binance] XRPUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved XRPUSDT 1h → data\binance\XRPUSDT\1h.json, data\binance\XRPUSDT\1h.csv
+
+[Bybit] Downloading XRPUSDT 1h ...
+[Bybit] XRPUSDT 1h: 1000/5000 (20.0%)
+[Bybit] XRPUSDT 1h: 2000/5000 (40.0%)
+[Bybit] XRPUSDT 1h: 3000/5000 (60.0%)
+[Bybit] XRPUSDT 1h: 4000/5000 (80.0%)
+[Bybit] XRPUSDT 1h: 5000/5000 (100.0%)
+[Bybit] XRPUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved XRPUSDT 1h → data\bybit\XRPUSDT\1h.json, data\bybit\XRPUSDT\1h.csv
+
+[Binance] Downloading XRPUSDT 4h ...
+[Binance] XRPUSDT 4h: 1000/5000 (20.0%)
+[Binance] XRPUSDT 4h: 2000/5000 (40.0%)
+[Binance] XRPUSDT 4h: 3000/5000 (60.0%)
+[Binance] XRPUSDT 4h: 4000/5000 (80.0%)
+[Binance] XRPUSDT 4h: 5000/5000 (100.0%)
+[Binance] XRPUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved XRPUSDT 4h → data\binance\XRPUSDT\4h.json, data\binance\XRPUSDT\4h.csv
+
+[Bybit] Downloading XRPUSDT 4h ...
+[Bybit] XRPUSDT 4h: 1000/5000 (20.0%)
+[Bybit] XRPUSDT 4h: 2000/5000 (40.0%)
+[Bybit] XRPUSDT 4h: 3000/5000 (60.0%)
+[Bybit] XRPUSDT 4h: 4000/5000 (80.0%)
+[Bybit] XRPUSDT 4h: 5000/5000 (100.0%)
+[Bybit] XRPUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved XRPUSDT 4h → data\bybit\XRPUSDT\4h.json, data\bybit\XRPUSDT\4h.csv
+
+==============================
+Symbol: LINKUSDT
+==============================
+
+[Binance] Downloading LINKUSDT 1m ...
+[Binance] LINKUSDT 1m: 1000/5000 (20.0%)
+[Binance] LINKUSDT 1m: 2000/5000 (40.0%)
+[Binance] LINKUSDT 1m: 3000/5000 (60.0%)
+[Binance] LINKUSDT 1m: 4000/5000 (80.0%)
+[Binance] LINKUSDT 1m: 5000/5000 (100.0%)
+[Binance] LINKUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved LINKUSDT 1m → data\binance\LINKUSDT\1m.json, data\binance\LINKUSDT\1m.csv
+
+[Bybit] Downloading LINKUSDT 1m ...
+[Bybit] LINKUSDT 1m: 1000/5000 (20.0%)
+[Bybit] LINKUSDT 1m: 2000/5000 (40.0%)
+[Bybit] LINKUSDT 1m: 3000/5000 (60.0%)
+[Bybit] LINKUSDT 1m: 4000/5000 (80.0%)
+[Bybit] LINKUSDT 1m: 5000/5000 (100.0%)
+[Bybit] LINKUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved LINKUSDT 1m → data\bybit\LINKUSDT\1m.json, data\bybit\LINKUSDT\1m.csv
+
+[Binance] Downloading LINKUSDT 5m ...
+[Binance] LINKUSDT 5m: 1000/5000 (20.0%)
+[Binance] LINKUSDT 5m: 2000/5000 (40.0%)
+[Binance] LINKUSDT 5m: 3000/5000 (60.0%)
+[Binance] LINKUSDT 5m: 4000/5000 (80.0%)
+[Binance] LINKUSDT 5m: 5000/5000 (100.0%)
+[Binance] LINKUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved LINKUSDT 5m → data\binance\LINKUSDT\5m.json, data\binance\LINKUSDT\5m.csv
+
+[Bybit] Downloading LINKUSDT 5m ...
+[Bybit] LINKUSDT 5m: 1000/5000 (20.0%)
+[Bybit] LINKUSDT 5m: 2000/5000 (40.0%)
+[Bybit] LINKUSDT 5m: 3000/5000 (60.0%)
+[Bybit] LINKUSDT 5m: 4000/5000 (80.0%)
+[Bybit] LINKUSDT 5m: 5000/5000 (100.0%)
+[Bybit] LINKUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved LINKUSDT 5m → data\bybit\LINKUSDT\5m.json, data\bybit\LINKUSDT\5m.csv
+
+[Binance] Downloading LINKUSDT 15m ...
+[Binance] LINKUSDT 15m: 1000/5000 (20.0%)
+[Binance] LINKUSDT 15m: 2000/5000 (40.0%)
+[Binance] LINKUSDT 15m: 3000/5000 (60.0%)
+[Binance] LINKUSDT 15m: 4000/5000 (80.0%)
+[Binance] LINKUSDT 15m: 5000/5000 (100.0%)
+[Binance] LINKUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved LINKUSDT 15m → data\binance\LINKUSDT\15m.json, data\binance\LINKUSDT\15m.csv
+
+[Bybit] Downloading LINKUSDT 15m ...
+[Bybit] LINKUSDT 15m: 1000/5000 (20.0%)
+[Bybit] LINKUSDT 15m: 2000/5000 (40.0%)
+[Bybit] LINKUSDT 15m: 3000/5000 (60.0%)
+[Bybit] LINKUSDT 15m: 4000/5000 (80.0%)
+[Bybit] LINKUSDT 15m: 5000/5000 (100.0%)
+[Bybit] LINKUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved LINKUSDT 15m → data\bybit\LINKUSDT\15m.json, data\bybit\LINKUSDT\15m.csv
+
+[Binance] Downloading LINKUSDT 1h ...
+[Binance] LINKUSDT 1h: 1000/5000 (20.0%)
+[Binance] LINKUSDT 1h: 2000/5000 (40.0%)
+[Binance] LINKUSDT 1h: 3000/5000 (60.0%)
+[Binance] LINKUSDT 1h: 4000/5000 (80.0%)
+[Binance] LINKUSDT 1h: 5000/5000 (100.0%)
+[Binance] LINKUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved LINKUSDT 1h → data\binance\LINKUSDT\1h.json, data\binance\LINKUSDT\1h.csv
+
+[Bybit] Downloading LINKUSDT 1h ...
+[Bybit] LINKUSDT 1h: 1000/5000 (20.0%)
+[Bybit] LINKUSDT 1h: 2000/5000 (40.0%)
+[Bybit] LINKUSDT 1h: 3000/5000 (60.0%)
+[Bybit] LINKUSDT 1h: 4000/5000 (80.0%)
+[Bybit] LINKUSDT 1h: 5000/5000 (100.0%)
+[Bybit] LINKUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved LINKUSDT 1h → data\bybit\LINKUSDT\1h.json, data\bybit\LINKUSDT\1h.csv
+
+[Binance] Downloading LINKUSDT 4h ...
+[Binance] LINKUSDT 4h: 1000/5000 (20.0%)
+[Binance] LINKUSDT 4h: 2000/5000 (40.0%)
+[Binance] LINKUSDT 4h: 3000/5000 (60.0%)
+[Binance] LINKUSDT 4h: 4000/5000 (80.0%)
+[Binance] LINKUSDT 4h: 5000/5000 (100.0%)
+[Binance] LINKUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved LINKUSDT 4h → data\binance\LINKUSDT\4h.json, data\binance\LINKUSDT\4h.csv
+
+[Bybit] Downloading LINKUSDT 4h ...
+[Bybit] LINKUSDT 4h: 1000/5000 (20.0%)
+[Bybit] LINKUSDT 4h: 2000/5000 (40.0%)
+[Bybit] LINKUSDT 4h: 3000/5000 (60.0%)
+[Bybit] LINKUSDT 4h: 4000/5000 (80.0%)
+[Bybit] LINKUSDT 4h: 5000/5000 (100.0%)
+[Bybit] LINKUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved LINKUSDT 4h → data\bybit\LINKUSDT\4h.json, data\bybit\LINKUSDT\4h.csv
+
+==============================
+Symbol: BNBUSDT
+==============================
+
+[Binance] Downloading BNBUSDT 1m ...
+[Binance] BNBUSDT 1m: 1000/5000 (20.0%)
+[Binance] BNBUSDT 1m: 2000/5000 (40.0%)
+[Binance] BNBUSDT 1m: 3000/5000 (60.0%)
+[Binance] BNBUSDT 1m: 4000/5000 (80.0%)
+[Binance] BNBUSDT 1m: 5000/5000 (100.0%)
+[Binance] BNBUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved BNBUSDT 1m → data\binance\BNBUSDT\1m.json, data\binance\BNBUSDT\1m.csv
+
+[Bybit] Downloading BNBUSDT 1m ...
+[Bybit] BNBUSDT 1m: 1000/5000 (20.0%)
+[Bybit] BNBUSDT 1m: 2000/5000 (40.0%)
+[Bybit] BNBUSDT 1m: 3000/5000 (60.0%)
+[Bybit] BNBUSDT 1m: 4000/5000 (80.0%)
+[Bybit] BNBUSDT 1m: 5000/5000 (100.0%)
+[Bybit] BNBUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved BNBUSDT 1m → data\bybit\BNBUSDT\1m.json, data\bybit\BNBUSDT\1m.csv
+
+[Binance] Downloading BNBUSDT 5m ...
+[Binance] BNBUSDT 5m: 1000/5000 (20.0%)
+[Binance] BNBUSDT 5m: 2000/5000 (40.0%)
+[Binance] BNBUSDT 5m: 3000/5000 (60.0%)
+[Binance] BNBUSDT 5m: 4000/5000 (80.0%)
+[Binance] BNBUSDT 5m: 5000/5000 (100.0%)
+[Binance] BNBUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved BNBUSDT 5m → data\binance\BNBUSDT\5m.json, data\binance\BNBUSDT\5m.csv
+
+[Bybit] Downloading BNBUSDT 5m ...
+[Bybit] BNBUSDT 5m: 1000/5000 (20.0%)
+[Bybit] BNBUSDT 5m: 2000/5000 (40.0%)
+[Bybit] BNBUSDT 5m: 3000/5000 (60.0%)
+[Bybit] BNBUSDT 5m: 4000/5000 (80.0%)
+[Bybit] BNBUSDT 5m: 5000/5000 (100.0%)
+[Bybit] BNBUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved BNBUSDT 5m → data\bybit\BNBUSDT\5m.json, data\bybit\BNBUSDT\5m.csv
+
+[Binance] Downloading BNBUSDT 15m ...
+[Binance] BNBUSDT 15m: 1000/5000 (20.0%)
+[Binance] BNBUSDT 15m: 2000/5000 (40.0%)
+[Binance] BNBUSDT 15m: 3000/5000 (60.0%)
+[Binance] BNBUSDT 15m: 4000/5000 (80.0%)
+[Binance] BNBUSDT 15m: 5000/5000 (100.0%)
+[Binance] BNBUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved BNBUSDT 15m → data\binance\BNBUSDT\15m.json, data\binance\BNBUSDT\15m.csv
+
+[Bybit] Downloading BNBUSDT 15m ...
+[Bybit] BNBUSDT 15m: 1000/5000 (20.0%)
+[Bybit] BNBUSDT 15m: 2000/5000 (40.0%)
+[Bybit] BNBUSDT 15m: 3000/5000 (60.0%)
+[Bybit] BNBUSDT 15m: 4000/5000 (80.0%)
+[Bybit] BNBUSDT 15m: 5000/5000 (100.0%)
+[Bybit] BNBUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved BNBUSDT 15m → data\bybit\BNBUSDT\15m.json, data\bybit\BNBUSDT\15m.csv
+
+[Binance] Downloading BNBUSDT 1h ...
+[Binance] BNBUSDT 1h: 1000/5000 (20.0%)
+[Binance] BNBUSDT 1h: 2000/5000 (40.0%)
+[Binance] BNBUSDT 1h: 3000/5000 (60.0%)
+[Binance] BNBUSDT 1h: 4000/5000 (80.0%)
+[Binance] BNBUSDT 1h: 5000/5000 (100.0%)
+[Binance] BNBUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved BNBUSDT 1h → data\binance\BNBUSDT\1h.json, data\binance\BNBUSDT\1h.csv
+
+[Bybit] Downloading BNBUSDT 1h ...
+[Bybit] BNBUSDT 1h: 1000/5000 (20.0%)
+[Bybit] BNBUSDT 1h: 2000/5000 (40.0%)
+[Bybit] BNBUSDT 1h: 3000/5000 (60.0%)
+[Bybit] BNBUSDT 1h: 4000/5000 (80.0%)
+[Bybit] BNBUSDT 1h: 5000/5000 (100.0%)
+[Bybit] BNBUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved BNBUSDT 1h → data\bybit\BNBUSDT\1h.json, data\bybit\BNBUSDT\1h.csv
+
+[Binance] Downloading BNBUSDT 4h ...
+[Binance] BNBUSDT 4h: 1000/5000 (20.0%)
+[Binance] BNBUSDT 4h: 2000/5000 (40.0%)
+[Binance] BNBUSDT 4h: 3000/5000 (60.0%)
+[Binance] BNBUSDT 4h: 4000/5000 (80.0%)
+[Binance] BNBUSDT 4h: 5000/5000 (100.0%)
+[Binance] BNBUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved BNBUSDT 4h → data\binance\BNBUSDT\4h.json, data\binance\BNBUSDT\4h.csv
+
+[Bybit] Downloading BNBUSDT 4h ...
+[Bybit] BNBUSDT 4h: 1000/5000 (20.0%)
+[Bybit] BNBUSDT 4h: 2000/5000 (40.0%)
+[Bybit] BNBUSDT 4h: 3000/5000 (60.0%)
+[Bybit] BNBUSDT 4h: 4000/5000 (80.0%)
+[Bybit] BNBUSDT 4h: 5000/5000 (100.0%)
+[Bybit] BNBUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved BNBUSDT 4h → data\bybit\BNBUSDT\4h.json, data\bybit\BNBUSDT\4h.csv
+
+==============================
+Symbol: DOGEUSDT
+==============================
+
+[Binance] Downloading DOGEUSDT 1m ...
+[Binance] DOGEUSDT 1m: 1000/5000 (20.0%)
+[Binance] DOGEUSDT 1m: 2000/5000 (40.0%)
+[Binance] DOGEUSDT 1m: 3000/5000 (60.0%)
+[Binance] DOGEUSDT 1m: 4000/5000 (80.0%)
+[Binance] DOGEUSDT 1m: 5000/5000 (100.0%)
+[Binance] DOGEUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved DOGEUSDT 1m → data\binance\DOGEUSDT\1m.json, data\binance\DOGEUSDT\1m.csv
+
+[Bybit] Downloading DOGEUSDT 1m ...
+[Bybit] DOGEUSDT 1m: 1000/5000 (20.0%)
+[Bybit] DOGEUSDT 1m: 2000/5000 (40.0%)
+[Bybit] DOGEUSDT 1m: 3000/5000 (60.0%)
+[Bybit] DOGEUSDT 1m: 4000/5000 (80.0%)
+[Bybit] DOGEUSDT 1m: 5000/5000 (100.0%)
+[Bybit] DOGEUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved DOGEUSDT 1m → data\bybit\DOGEUSDT\1m.json, data\bybit\DOGEUSDT\1m.csv
+
+[Binance] Downloading DOGEUSDT 5m ...
+[Binance] DOGEUSDT 5m: 1000/5000 (20.0%)
+[Binance] DOGEUSDT 5m: 2000/5000 (40.0%)
+[Binance] DOGEUSDT 5m: 3000/5000 (60.0%)
+[Binance] DOGEUSDT 5m: 4000/5000 (80.0%)
+[Binance] DOGEUSDT 5m: 5000/5000 (100.0%)
+[Binance] DOGEUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved DOGEUSDT 5m → data\binance\DOGEUSDT\5m.json, data\binance\DOGEUSDT\5m.csv
+
+[Bybit] Downloading DOGEUSDT 5m ...
+[Bybit] DOGEUSDT 5m: 1000/5000 (20.0%)
+[Bybit] DOGEUSDT 5m: 2000/5000 (40.0%)
+[Bybit] DOGEUSDT 5m: 3000/5000 (60.0%)
+[Bybit] DOGEUSDT 5m: 4000/5000 (80.0%)
+[Bybit] DOGEUSDT 5m: 5000/5000 (100.0%)
+[Bybit] DOGEUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved DOGEUSDT 5m → data\bybit\DOGEUSDT\5m.json, data\bybit\DOGEUSDT\5m.csv
+
+[Binance] Downloading DOGEUSDT 15m ...
+[Binance] DOGEUSDT 15m: 1000/5000 (20.0%)
+[Binance] DOGEUSDT 15m: 2000/5000 (40.0%)
+[Binance] DOGEUSDT 15m: 3000/5000 (60.0%)
+[Binance] DOGEUSDT 15m: 4000/5000 (80.0%)
+[Binance] DOGEUSDT 15m: 5000/5000 (100.0%)
+[Binance] DOGEUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved DOGEUSDT 15m → data\binance\DOGEUSDT\15m.json, data\binance\DOGEUSDT\15m.csv
+
+[Bybit] Downloading DOGEUSDT 15m ...
+[Bybit] DOGEUSDT 15m: 1000/5000 (20.0%)
+[Bybit] DOGEUSDT 15m: 2000/5000 (40.0%)
+[Bybit] DOGEUSDT 15m: 3000/5000 (60.0%)
+[Bybit] DOGEUSDT 15m: 4000/5000 (80.0%)
+[Bybit] DOGEUSDT 15m: 5000/5000 (100.0%)
+[Bybit] DOGEUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved DOGEUSDT 15m → data\bybit\DOGEUSDT\15m.json, data\bybit\DOGEUSDT\15m.csv
+
+[Binance] Downloading DOGEUSDT 1h ...
+[Binance] DOGEUSDT 1h: 1000/5000 (20.0%)
+[Binance] DOGEUSDT 1h: 2000/5000 (40.0%)
+[Binance] DOGEUSDT 1h: 3000/5000 (60.0%)
+[Binance] DOGEUSDT 1h: 4000/5000 (80.0%)
+[Binance] DOGEUSDT 1h: 5000/5000 (100.0%)
+[Binance] DOGEUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved DOGEUSDT 1h → data\binance\DOGEUSDT\1h.json, data\binance\DOGEUSDT\1h.csv
+
+[Bybit] Downloading DOGEUSDT 1h ...
+[Bybit] DOGEUSDT 1h: 1000/5000 (20.0%)
+[Bybit] DOGEUSDT 1h: 2000/5000 (40.0%)
+[Bybit] DOGEUSDT 1h: 3000/5000 (60.0%)
+[Bybit] DOGEUSDT 1h: 4000/5000 (80.0%)
+[Bybit] DOGEUSDT 1h: 5000/5000 (100.0%)
+[Bybit] DOGEUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved DOGEUSDT 1h → data\bybit\DOGEUSDT\1h.json, data\bybit\DOGEUSDT\1h.csv
+
+[Binance] Downloading DOGEUSDT 4h ...
+[Binance] DOGEUSDT 4h: 1000/5000 (20.0%)
+[Binance] DOGEUSDT 4h: 2000/5000 (40.0%)
+[Binance] DOGEUSDT 4h: 3000/5000 (60.0%)
+[Binance] DOGEUSDT 4h: 4000/5000 (80.0%)
+[Binance] DOGEUSDT 4h: 5000/5000 (100.0%)
+[Binance] DOGEUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved DOGEUSDT 4h → data\binance\DOGEUSDT\4h.json, data\binance\DOGEUSDT\4h.csv
+
+[Bybit] Downloading DOGEUSDT 4h ...
+[Bybit] DOGEUSDT 4h: 1000/5000 (20.0%)
+[Bybit] DOGEUSDT 4h: 2000/5000 (40.0%)
+[Bybit] DOGEUSDT 4h: 3000/5000 (60.0%)
+[Bybit] DOGEUSDT 4h: 4000/5000 (80.0%)
+[Bybit] DOGEUSDT 4h: 5000/5000 (100.0%)
+[Bybit] DOGEUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved DOGEUSDT 4h → data\bybit\DOGEUSDT\4h.json, data\bybit\DOGEUSDT\4h.csv
+
+==============================
+Symbol: ADAUSDT
+==============================
+
+[Binance] Downloading ADAUSDT 1m ...
+[Binance] ADAUSDT 1m: 1000/5000 (20.0%)
+[Binance] ADAUSDT 1m: 2000/5000 (40.0%)
+[Binance] ADAUSDT 1m: 3000/5000 (60.0%)
+[Binance] ADAUSDT 1m: 4000/5000 (80.0%)
+[Binance] ADAUSDT 1m: 5000/5000 (100.0%)
+[Binance] ADAUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved ADAUSDT 1m → data\binance\ADAUSDT\1m.json, data\binance\ADAUSDT\1m.csv
+
+[Bybit] Downloading ADAUSDT 1m ...
+[Bybit] ADAUSDT 1m: 1000/5000 (20.0%)
+[Bybit] ADAUSDT 1m: 2000/5000 (40.0%)
+[Bybit] ADAUSDT 1m: 3000/5000 (60.0%)
+[Bybit] ADAUSDT 1m: 4000/5000 (80.0%)
+[Bybit] ADAUSDT 1m: 5000/5000 (100.0%)
+[Bybit] ADAUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved ADAUSDT 1m → data\bybit\ADAUSDT\1m.json, data\bybit\ADAUSDT\1m.csv
+
+[Binance] Downloading ADAUSDT 5m ...
+[Binance] ADAUSDT 5m: 1000/5000 (20.0%)
+[Binance] ADAUSDT 5m: 2000/5000 (40.0%)
+[Binance] ADAUSDT 5m: 3000/5000 (60.0%)
+[Binance] ADAUSDT 5m: 4000/5000 (80.0%)
+[Binance] ADAUSDT 5m: 5000/5000 (100.0%)
+[Binance] ADAUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved ADAUSDT 5m → data\binance\ADAUSDT\5m.json, data\binance\ADAUSDT\5m.csv
+
+[Bybit] Downloading ADAUSDT 5m ...
+[Bybit] ADAUSDT 5m: 1000/5000 (20.0%)
+[Bybit] ADAUSDT 5m: 2000/5000 (40.0%)
+[Bybit] ADAUSDT 5m: 3000/5000 (60.0%)
+[Bybit] ADAUSDT 5m: 4000/5000 (80.0%)
+[Bybit] ADAUSDT 5m: 5000/5000 (100.0%)
+[Bybit] ADAUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved ADAUSDT 5m → data\bybit\ADAUSDT\5m.json, data\bybit\ADAUSDT\5m.csv
+
+[Binance] Downloading ADAUSDT 15m ...
+[Binance] ADAUSDT 15m: 1000/5000 (20.0%)
+[Binance] ADAUSDT 15m: 2000/5000 (40.0%)
+[Binance] ADAUSDT 15m: 3000/5000 (60.0%)
+[Binance] ADAUSDT 15m: 4000/5000 (80.0%)
+[Binance] ADAUSDT 15m: 5000/5000 (100.0%)
+[Binance] ADAUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved ADAUSDT 15m → data\binance\ADAUSDT\15m.json, data\binance\ADAUSDT\15m.csv
+
+[Bybit] Downloading ADAUSDT 15m ...
+[Bybit] ADAUSDT 15m: 1000/5000 (20.0%)
+[Bybit] ADAUSDT 15m: 2000/5000 (40.0%)
+[Bybit] ADAUSDT 15m: 3000/5000 (60.0%)
+[Bybit] ADAUSDT 15m: 4000/5000 (80.0%)
+[Bybit] ADAUSDT 15m: 5000/5000 (100.0%)
+[Bybit] ADAUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved ADAUSDT 15m → data\bybit\ADAUSDT\15m.json, data\bybit\ADAUSDT\15m.csv
+
+[Binance] Downloading ADAUSDT 1h ...
+[Binance] ADAUSDT 1h: 1000/5000 (20.0%)
+[Binance] ADAUSDT 1h: 2000/5000 (40.0%)
+[Binance] ADAUSDT 1h: 3000/5000 (60.0%)
+[Binance] ADAUSDT 1h: 4000/5000 (80.0%)
+[Binance] ADAUSDT 1h: 5000/5000 (100.0%)
+[Binance] ADAUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved ADAUSDT 1h → data\binance\ADAUSDT\1h.json, data\binance\ADAUSDT\1h.csv
+
+[Bybit] Downloading ADAUSDT 1h ...
+[Bybit] ADAUSDT 1h: 1000/5000 (20.0%)
+[Bybit] ADAUSDT 1h: 2000/5000 (40.0%)
+[Bybit] ADAUSDT 1h: 3000/5000 (60.0%)
+[Bybit] ADAUSDT 1h: 4000/5000 (80.0%)
+[Bybit] ADAUSDT 1h: 5000/5000 (100.0%)
+[Bybit] ADAUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved ADAUSDT 1h → data\bybit\ADAUSDT\1h.json, data\bybit\ADAUSDT\1h.csv
+
+[Binance] Downloading ADAUSDT 4h ...
+[Binance] ADAUSDT 4h: 1000/5000 (20.0%)
+[Binance] ADAUSDT 4h: 2000/5000 (40.0%)
+[Binance] ADAUSDT 4h: 3000/5000 (60.0%)
+[Binance] ADAUSDT 4h: 4000/5000 (80.0%)
+[Binance] ADAUSDT 4h: 5000/5000 (100.0%)
+[Binance] ADAUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved ADAUSDT 4h → data\binance\ADAUSDT\4h.json, data\binance\ADAUSDT\4h.csv
+
+[Bybit] Downloading ADAUSDT 4h ...
+[Bybit] ADAUSDT 4h: 1000/5000 (20.0%)
+[Bybit] ADAUSDT 4h: 2000/5000 (40.0%)
+[Bybit] ADAUSDT 4h: 3000/5000 (60.0%)
+[Bybit] ADAUSDT 4h: 4000/5000 (80.0%)
+[Bybit] ADAUSDT 4h: 5000/5000 (100.0%)
+[Bybit] ADAUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved ADAUSDT 4h → data\bybit\ADAUSDT\4h.json, data\bybit\ADAUSDT\4h.csv
+
+==============================
+Symbol: OPUSDT
+==============================
+
+[Binance] Downloading OPUSDT 1m ...
+[Binance] OPUSDT 1m: 1000/5000 (20.0%)
+[Binance] OPUSDT 1m: 2000/5000 (40.0%)
+[Binance] OPUSDT 1m: 3000/5000 (60.0%)
+[Binance] OPUSDT 1m: 4000/5000 (80.0%)
+[Binance] OPUSDT 1m: 5000/5000 (100.0%)
+[Binance] OPUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved OPUSDT 1m → data\binance\OPUSDT\1m.json, data\binance\OPUSDT\1m.csv
+
+[Bybit] Downloading OPUSDT 1m ...
+[Bybit] OPUSDT 1m: 1000/5000 (20.0%)
+[Bybit] OPUSDT 1m: 2000/5000 (40.0%)
+[Bybit] OPUSDT 1m: 3000/5000 (60.0%)
+[Bybit] OPUSDT 1m: 4000/5000 (80.0%)
+[Bybit] OPUSDT 1m: 5000/5000 (100.0%)
+[Bybit] OPUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved OPUSDT 1m → data\bybit\OPUSDT\1m.json, data\bybit\OPUSDT\1m.csv
+
+[Binance] Downloading OPUSDT 5m ...
+[Binance] OPUSDT 5m: 1000/5000 (20.0%)
+[Binance] OPUSDT 5m: 2000/5000 (40.0%)
+[Binance] OPUSDT 5m: 3000/5000 (60.0%)
+[Binance] OPUSDT 5m: 4000/5000 (80.0%)
+[Binance] OPUSDT 5m: 5000/5000 (100.0%)
+[Binance] OPUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved OPUSDT 5m → data\binance\OPUSDT\5m.json, data\binance\OPUSDT\5m.csv
+
+[Bybit] Downloading OPUSDT 5m ...
+[Bybit] OPUSDT 5m: 1000/5000 (20.0%)
+[Bybit] OPUSDT 5m: 2000/5000 (40.0%)
+[Bybit] OPUSDT 5m: 3000/5000 (60.0%)
+[Bybit] OPUSDT 5m: 4000/5000 (80.0%)
+[Bybit] OPUSDT 5m: 5000/5000 (100.0%)
+[Bybit] OPUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved OPUSDT 5m → data\bybit\OPUSDT\5m.json, data\bybit\OPUSDT\5m.csv
+
+[Binance] Downloading OPUSDT 15m ...
+[Binance] OPUSDT 15m: 1000/5000 (20.0%)
+[Binance] OPUSDT 15m: 2000/5000 (40.0%)
+[Binance] OPUSDT 15m: 3000/5000 (60.0%)
+[Binance] OPUSDT 15m: 4000/5000 (80.0%)
+[Binance] OPUSDT 15m: 5000/5000 (100.0%)
+[Binance] OPUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved OPUSDT 15m → data\binance\OPUSDT\15m.json, data\binance\OPUSDT\15m.csv
+
+[Bybit] Downloading OPUSDT 15m ...
+[Bybit] OPUSDT 15m: 1000/5000 (20.0%)
+[Bybit] OPUSDT 15m: 2000/5000 (40.0%)
+[Bybit] OPUSDT 15m: 3000/5000 (60.0%)
+[Bybit] OPUSDT 15m: 4000/5000 (80.0%)
+[Bybit] OPUSDT 15m: 5000/5000 (100.0%)
+[Bybit] OPUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved OPUSDT 15m → data\bybit\OPUSDT\15m.json, data\bybit\OPUSDT\15m.csv
+
+[Binance] Downloading OPUSDT 1h ...
+[Binance] OPUSDT 1h: 1000/5000 (20.0%)
+[Binance] OPUSDT 1h: 2000/5000 (40.0%)
+[Binance] OPUSDT 1h: 3000/5000 (60.0%)
+[Binance] OPUSDT 1h: 4000/5000 (80.0%)
+[Binance] OPUSDT 1h: 5000/5000 (100.0%)
+[Binance] OPUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved OPUSDT 1h → data\binance\OPUSDT\1h.json, data\binance\OPUSDT\1h.csv
+
+[Bybit] Downloading OPUSDT 1h ...
+[Bybit] OPUSDT 1h: 1000/5000 (20.0%)
+[Bybit] OPUSDT 1h: 2000/5000 (40.0%)
+[Bybit] OPUSDT 1h: 3000/5000 (60.0%)
+[Bybit] OPUSDT 1h: 4000/5000 (80.0%)
+[Bybit] OPUSDT 1h: 5000/5000 (100.0%)
+[Bybit] OPUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved OPUSDT 1h → data\bybit\OPUSDT\1h.json, data\bybit\OPUSDT\1h.csv
+
+[Binance] Downloading OPUSDT 4h ...
+[Binance] OPUSDT 4h: 1000/5000 (20.0%)
+[Binance] OPUSDT 4h: 2000/5000 (40.0%)
+[Binance] OPUSDT 4h: 3000/5000 (60.0%)
+[Binance] OPUSDT 4h: 4000/5000 (80.0%)
+[Binance] OPUSDT 4h: 5000/5000 (100.0%)
+[Binance] OPUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved OPUSDT 4h → data\binance\OPUSDT\4h.json, data\binance\OPUSDT\4h.csv
+
+[Bybit] Downloading OPUSDT 4h ...
+[Bybit] OPUSDT 4h: 1000/5000 (20.0%)
+[Bybit] OPUSDT 4h: 2000/5000 (40.0%)
+[Bybit] OPUSDT 4h: 3000/5000 (60.0%)
+[Bybit] OPUSDT 4h: 4000/5000 (80.0%)
+[Bybit] OPUSDT 4h: 5000/5000 (100.0%)
+[Bybit] OPUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved OPUSDT 4h → data\bybit\OPUSDT\4h.json, data\bybit\OPUSDT\4h.csv
+
+==============================
+Symbol: ARBUSDT
+==============================
+
+[Binance] Downloading ARBUSDT 1m ...
+[Binance] ARBUSDT 1m: 1000/5000 (20.0%)
+[Binance] ARBUSDT 1m: 2000/5000 (40.0%)
+[Binance] ARBUSDT 1m: 3000/5000 (60.0%)
+[Binance] ARBUSDT 1m: 4000/5000 (80.0%)
+[Binance] ARBUSDT 1m: 5000/5000 (100.0%)
+[Binance] ARBUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved ARBUSDT 1m → data\binance\ARBUSDT\1m.json, data\binance\ARBUSDT\1m.csv
+
+[Bybit] Downloading ARBUSDT 1m ...
+[Bybit] ARBUSDT 1m: 1000/5000 (20.0%)
+[Bybit] ARBUSDT 1m: 2000/5000 (40.0%)
+[Bybit] ARBUSDT 1m: 3000/5000 (60.0%)
+[Bybit] ARBUSDT 1m: 4000/5000 (80.0%)
+[Bybit] ARBUSDT 1m: 5000/5000 (100.0%)
+[Bybit] ARBUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved ARBUSDT 1m → data\bybit\ARBUSDT\1m.json, data\bybit\ARBUSDT\1m.csv
+
+[Binance] Downloading ARBUSDT 5m ...
+[Binance] ARBUSDT 5m: 1000/5000 (20.0%)
+[Binance] ARBUSDT 5m: 2000/5000 (40.0%)
+[Binance] ARBUSDT 5m: 3000/5000 (60.0%)
+[Binance] ARBUSDT 5m: 4000/5000 (80.0%)
+[Binance] ARBUSDT 5m: 5000/5000 (100.0%)
+[Binance] ARBUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved ARBUSDT 5m → data\binance\ARBUSDT\5m.json, data\binance\ARBUSDT\5m.csv
+
+[Bybit] Downloading ARBUSDT 5m ...
+[Bybit] ARBUSDT 5m: 1000/5000 (20.0%)
+[Bybit] ARBUSDT 5m: 2000/5000 (40.0%)
+[Bybit] ARBUSDT 5m: 3000/5000 (60.0%)
+[Bybit] ARBUSDT 5m: 4000/5000 (80.0%)
+[Bybit] ARBUSDT 5m: 5000/5000 (100.0%)
+[Bybit] ARBUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved ARBUSDT 5m → data\bybit\ARBUSDT\5m.json, data\bybit\ARBUSDT\5m.csv
+
+[Binance] Downloading ARBUSDT 15m ...
+[Binance] ARBUSDT 15m: 1000/5000 (20.0%)
+[Binance] ARBUSDT 15m: 2000/5000 (40.0%)
+[Binance] ARBUSDT 15m: 3000/5000 (60.0%)
+[Binance] ARBUSDT 15m: 4000/5000 (80.0%)
+[Binance] ARBUSDT 15m: 5000/5000 (100.0%)
+[Binance] ARBUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved ARBUSDT 15m → data\binance\ARBUSDT\15m.json, data\binance\ARBUSDT\15m.csv
+
+[Bybit] Downloading ARBUSDT 15m ...
+[Bybit] ARBUSDT 15m: 1000/5000 (20.0%)
+[Bybit] ARBUSDT 15m: 2000/5000 (40.0%)
+[Bybit] ARBUSDT 15m: 3000/5000 (60.0%)
+[Bybit] ARBUSDT 15m: 4000/5000 (80.0%)
+[Bybit] ARBUSDT 15m: 5000/5000 (100.0%)
+[Bybit] ARBUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved ARBUSDT 15m → data\bybit\ARBUSDT\15m.json, data\bybit\ARBUSDT\15m.csv
+
+[Binance] Downloading ARBUSDT 1h ...
+[Binance] ARBUSDT 1h: 1000/5000 (20.0%)
+[Binance] ARBUSDT 1h: 2000/5000 (40.0%)
+[Binance] ARBUSDT 1h: 3000/5000 (60.0%)
+[Binance] ARBUSDT 1h: 4000/5000 (80.0%)
+[Binance] ARBUSDT 1h: 5000/5000 (100.0%)
+[Binance] ARBUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved ARBUSDT 1h → data\binance\ARBUSDT\1h.json, data\binance\ARBUSDT\1h.csv
+
+[Bybit] Downloading ARBUSDT 1h ...
+[Bybit] ARBUSDT 1h: 1000/5000 (20.0%)
+[Bybit] ARBUSDT 1h: 2000/5000 (40.0%)
+[Bybit] ARBUSDT 1h: 3000/5000 (60.0%)
+[Bybit] ARBUSDT 1h: 4000/5000 (80.0%)
+[Bybit] ARBUSDT 1h: 5000/5000 (100.0%)
+[Bybit] ARBUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved ARBUSDT 1h → data\bybit\ARBUSDT\1h.json, data\bybit\ARBUSDT\1h.csv
+
+[Binance] Downloading ARBUSDT 4h ...
+[Binance] ARBUSDT 4h: 1000/5000 (20.0%)
+[Binance] ARBUSDT 4h: 2000/5000 (40.0%)
+[Binance] ARBUSDT 4h: 3000/5000 (60.0%)
+[Binance] ARBUSDT 4h: 4000/5000 (80.0%)
+[Binance] ARBUSDT 4h: 5000/5000 (100.0%)
+[Binance] ARBUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved ARBUSDT 4h → data\binance\ARBUSDT\4h.json, data\binance\ARBUSDT\4h.csv
+
+[Bybit] Downloading ARBUSDT 4h ...
+[Bybit] ARBUSDT 4h: 1000/5000 (20.0%)
+[Bybit] ARBUSDT 4h: 2000/5000 (40.0%)
+[Bybit] ARBUSDT 4h: 3000/5000 (60.0%)
+[Bybit] ARBUSDT 4h: 4000/5000 (80.0%)
+[Bybit] ARBUSDT 4h: 5000/5000 (100.0%)
+[Bybit] ARBUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved ARBUSDT 4h → data\bybit\ARBUSDT\4h.json, data\bybit\ARBUSDT\4h.csv
+
+==============================
+Symbol: AVAXUSDT
+==============================
+
+[Binance] Downloading AVAXUSDT 1m ...
+[Binance] AVAXUSDT 1m: 1000/5000 (20.0%)
+[Binance] AVAXUSDT 1m: 2000/5000 (40.0%)
+[Binance] AVAXUSDT 1m: 3000/5000 (60.0%)
+[Binance] AVAXUSDT 1m: 4000/5000 (80.0%)
+[Binance] AVAXUSDT 1m: 5000/5000 (100.0%)
+[Binance] AVAXUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved AVAXUSDT 1m → data\binance\AVAXUSDT\1m.json, data\binance\AVAXUSDT\1m.csv
+
+[Bybit] Downloading AVAXUSDT 1m ...
+[Bybit] AVAXUSDT 1m: 1000/5000 (20.0%)
+[Bybit] AVAXUSDT 1m: 2000/5000 (40.0%)
+[Bybit] AVAXUSDT 1m: 3000/5000 (60.0%)
+[Bybit] AVAXUSDT 1m: 4000/5000 (80.0%)
+[Bybit] AVAXUSDT 1m: 5000/5000 (100.0%)
+[Bybit] AVAXUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved AVAXUSDT 1m → data\bybit\AVAXUSDT\1m.json, data\bybit\AVAXUSDT\1m.csv
+
+[Binance] Downloading AVAXUSDT 5m ...
+[Binance] AVAXUSDT 5m: 1000/5000 (20.0%)
+[Binance] AVAXUSDT 5m: 2000/5000 (40.0%)
+[Binance] AVAXUSDT 5m: 3000/5000 (60.0%)
+[Binance] AVAXUSDT 5m: 4000/5000 (80.0%)
+[Binance] AVAXUSDT 5m: 5000/5000 (100.0%)
+[Binance] AVAXUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved AVAXUSDT 5m → data\binance\AVAXUSDT\5m.json, data\binance\AVAXUSDT\5m.csv
+
+[Bybit] Downloading AVAXUSDT 5m ...
+[Bybit] AVAXUSDT 5m: 1000/5000 (20.0%)
+[Bybit] AVAXUSDT 5m: 2000/5000 (40.0%)
+[Bybit] AVAXUSDT 5m: 3000/5000 (60.0%)
+[Bybit] AVAXUSDT 5m: 4000/5000 (80.0%)
+[Bybit] AVAXUSDT 5m: 5000/5000 (100.0%)
+[Bybit] AVAXUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved AVAXUSDT 5m → data\bybit\AVAXUSDT\5m.json, data\bybit\AVAXUSDT\5m.csv
+
+[Binance] Downloading AVAXUSDT 15m ...
+[Binance] AVAXUSDT 15m: 1000/5000 (20.0%)
+[Binance] AVAXUSDT 15m: 2000/5000 (40.0%)
+[Binance] AVAXUSDT 15m: 3000/5000 (60.0%)
+[Binance] AVAXUSDT 15m: 4000/5000 (80.0%)
+[Binance] AVAXUSDT 15m: 5000/5000 (100.0%)
+[Binance] AVAXUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved AVAXUSDT 15m → data\binance\AVAXUSDT\15m.json, data\binance\AVAXUSDT\15m.csv
+
+[Bybit] Downloading AVAXUSDT 15m ...
+[Bybit] AVAXUSDT 15m: 1000/5000 (20.0%)
+[Bybit] AVAXUSDT 15m: 2000/5000 (40.0%)
+[Bybit] AVAXUSDT 15m: 3000/5000 (60.0%)
+[Bybit] AVAXUSDT 15m: 4000/5000 (80.0%)
+[Bybit] AVAXUSDT 15m: 5000/5000 (100.0%)
+[Bybit] AVAXUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved AVAXUSDT 15m → data\bybit\AVAXUSDT\15m.json, data\bybit\AVAXUSDT\15m.csv
+
+[Binance] Downloading AVAXUSDT 1h ...
+[Binance] AVAXUSDT 1h: 1000/5000 (20.0%)
+[Binance] AVAXUSDT 1h: 2000/5000 (40.0%)
+[Binance] AVAXUSDT 1h: 3000/5000 (60.0%)
+[Binance] AVAXUSDT 1h: 4000/5000 (80.0%)
+[Binance] AVAXUSDT 1h: 5000/5000 (100.0%)
+[Binance] AVAXUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved AVAXUSDT 1h → data\binance\AVAXUSDT\1h.json, data\binance\AVAXUSDT\1h.csv
+
+[Bybit] Downloading AVAXUSDT 1h ...
+[Bybit] AVAXUSDT 1h: 1000/5000 (20.0%)
+[Bybit] AVAXUSDT 1h: 2000/5000 (40.0%)
+[Bybit] AVAXUSDT 1h: 3000/5000 (60.0%)
+[Bybit] AVAXUSDT 1h: 4000/5000 (80.0%)
+[Bybit] AVAXUSDT 1h: 5000/5000 (100.0%)
+[Bybit] AVAXUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved AVAXUSDT 1h → data\bybit\AVAXUSDT\1h.json, data\bybit\AVAXUSDT\1h.csv
+
+[Binance] Downloading AVAXUSDT 4h ...
+[Binance] AVAXUSDT 4h: 1000/5000 (20.0%)
+[Binance] AVAXUSDT 4h: 2000/5000 (40.0%)
+[Binance] AVAXUSDT 4h: 3000/5000 (60.0%)
+[Binance] AVAXUSDT 4h: 4000/5000 (80.0%)
+[Binance] AVAXUSDT 4h: 5000/5000 (100.0%)
+[Binance] AVAXUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved AVAXUSDT 4h → data\binance\AVAXUSDT\4h.json, data\binance\AVAXUSDT\4h.csv
+
+[Bybit] Downloading AVAXUSDT 4h ...
+[Bybit] AVAXUSDT 4h: 1000/5000 (20.0%)
+[Bybit] AVAXUSDT 4h: 2000/5000 (40.0%)
+[Bybit] AVAXUSDT 4h: 3000/5000 (60.0%)
+[Bybit] AVAXUSDT 4h: 4000/5000 (80.0%)
+[Bybit] AVAXUSDT 4h: 5000/5000 (100.0%)
+[Bybit] AVAXUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved AVAXUSDT 4h → data\bybit\AVAXUSDT\4h.json, data\bybit\AVAXUSDT\4h.csv
+
+==============================
+Symbol: TONUSDT
+==============================
+
+[Binance] Downloading TONUSDT 1m ...
+[Binance] TONUSDT 1m: 1000/5000 (20.0%)
+[Binance] TONUSDT 1m: 2000/5000 (40.0%)
+[Binance] TONUSDT 1m: 3000/5000 (60.0%)
+[Binance] TONUSDT 1m: 4000/5000 (80.0%)
+[Binance] TONUSDT 1m: 5000/5000 (100.0%)
+[Binance] TONUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved TONUSDT 1m → data\binance\TONUSDT\1m.json, data\binance\TONUSDT\1m.csv
+
+[Bybit] Downloading TONUSDT 1m ...
+[Bybit] TONUSDT 1m: 1000/5000 (20.0%)
+[Bybit] TONUSDT 1m: 2000/5000 (40.0%)
+[Bybit] TONUSDT 1m: 3000/5000 (60.0%)
+[Bybit] TONUSDT 1m: 4000/5000 (80.0%)
+[Bybit] TONUSDT 1m: 5000/5000 (100.0%)
+[Bybit] TONUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved TONUSDT 1m → data\bybit\TONUSDT\1m.json, data\bybit\TONUSDT\1m.csv
+
+[Binance] Downloading TONUSDT 5m ...
+[Binance] TONUSDT 5m: 1000/5000 (20.0%)
+[Binance] TONUSDT 5m: 2000/5000 (40.0%)
+[Binance] TONUSDT 5m: 3000/5000 (60.0%)
+[Binance] TONUSDT 5m: 4000/5000 (80.0%)
+[Binance] TONUSDT 5m: 5000/5000 (100.0%)
+[Binance] TONUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved TONUSDT 5m → data\binance\TONUSDT\5m.json, data\binance\TONUSDT\5m.csv
+
+[Bybit] Downloading TONUSDT 5m ...
+[Bybit] TONUSDT 5m: 1000/5000 (20.0%)
+[Bybit] TONUSDT 5m: 2000/5000 (40.0%)
+[Bybit] TONUSDT 5m: 3000/5000 (60.0%)
+[Bybit] TONUSDT 5m: 4000/5000 (80.0%)
+[Bybit] TONUSDT 5m: 5000/5000 (100.0%)
+[Bybit] TONUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved TONUSDT 5m → data\bybit\TONUSDT\5m.json, data\bybit\TONUSDT\5m.csv
+
+[Binance] Downloading TONUSDT 15m ...
+[Binance] TONUSDT 15m: 1000/5000 (20.0%)
+[Binance] TONUSDT 15m: 2000/5000 (40.0%)
+[Binance] TONUSDT 15m: 3000/5000 (60.0%)
+[Binance] TONUSDT 15m: 4000/5000 (80.0%)
+[Binance] TONUSDT 15m: 5000/5000 (100.0%)
+[Binance] TONUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved TONUSDT 15m → data\binance\TONUSDT\15m.json, data\binance\TONUSDT\15m.csv
+
+[Bybit] Downloading TONUSDT 15m ...
+[Bybit] TONUSDT 15m: 1000/5000 (20.0%)
+[Bybit] TONUSDT 15m: 2000/5000 (40.0%)
+[Bybit] TONUSDT 15m: 3000/5000 (60.0%)
+[Bybit] TONUSDT 15m: 4000/5000 (80.0%)
+[Bybit] TONUSDT 15m: 5000/5000 (100.0%)
+[Bybit] TONUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved TONUSDT 15m → data\bybit\TONUSDT\15m.json, data\bybit\TONUSDT\15m.csv
+
+[Binance] Downloading TONUSDT 1h ...
+[Binance] TONUSDT 1h: 1000/5000 (20.0%)
+[Binance] TONUSDT 1h: 2000/5000 (40.0%)
+[Binance] TONUSDT 1h: 3000/5000 (60.0%)
+[Binance] TONUSDT 1h: 4000/5000 (80.0%)
+[Binance] TONUSDT 1h: 5000/5000 (100.0%)
+[Binance] TONUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved TONUSDT 1h → data\binance\TONUSDT\1h.json, data\binance\TONUSDT\1h.csv
+
+[Bybit] Downloading TONUSDT 1h ...
+[Bybit] TONUSDT 1h: 1000/5000 (20.0%)
+[Bybit] TONUSDT 1h: 2000/5000 (40.0%)
+[Bybit] TONUSDT 1h: 3000/5000 (60.0%)
+[Bybit] TONUSDT 1h: 4000/5000 (80.0%)
+[Bybit] TONUSDT 1h: 5000/5000 (100.0%)
+[Bybit] TONUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved TONUSDT 1h → data\bybit\TONUSDT\1h.json, data\bybit\TONUSDT\1h.csv
+
+[Binance] Downloading TONUSDT 4h ...
+[Binance] TONUSDT 4h: 1000/5000 (20.0%)
+[Binance] TONUSDT 4h: 2000/5000 (40.0%)
+[Binance] TONUSDT 4h: 3000/5000 (60.0%)
+[Binance] TONUSDT 4h: 3379/5000 (67.6%)
+[Binance] No more data or error.
+[Binance] TONUSDT 4h DONE. Total: 3379 candles.
+[binance] Saved TONUSDT 4h → data\binance\TONUSDT\4h.json, data\binance\TONUSDT\4h.csv
+
+[Bybit] Downloading TONUSDT 4h ...
+[Bybit] TONUSDT 4h: 1000/5000 (20.0%)
+[Bybit] TONUSDT 4h: 2000/5000 (40.0%)
+[Bybit] TONUSDT 4h: 3000/5000 (60.0%)
+[Bybit] TONUSDT 4h: 4000/5000 (80.0%)
+[Bybit] TONUSDT 4h: 5000/5000 (100.0%)
+[Bybit] TONUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved TONUSDT 4h → data\bybit\TONUSDT\4h.json, data\bybit\TONUSDT\4h.csv
+
+==============================
+Symbol: NEARUSDT
+==============================
+
+[Binance] Downloading NEARUSDT 1m ...
+[Binance] NEARUSDT 1m: 1000/5000 (20.0%)
+[Binance] NEARUSDT 1m: 2000/5000 (40.0%)
+[Binance] NEARUSDT 1m: 3000/5000 (60.0%)
+[Binance] NEARUSDT 1m: 4000/5000 (80.0%)
+[Binance] NEARUSDT 1m: 5000/5000 (100.0%)
+[Binance] NEARUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved NEARUSDT 1m → data\binance\NEARUSDT\1m.json, data\binance\NEARUSDT\1m.csv
+
+[Bybit] Downloading NEARUSDT 1m ...
+[Bybit] NEARUSDT 1m: 1000/5000 (20.0%)
+[Bybit] NEARUSDT 1m: 2000/5000 (40.0%)
+[Bybit] NEARUSDT 1m: 3000/5000 (60.0%)
+[Bybit] NEARUSDT 1m: 4000/5000 (80.0%)
+[Bybit] NEARUSDT 1m: 5000/5000 (100.0%)
+[Bybit] NEARUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved NEARUSDT 1m → data\bybit\NEARUSDT\1m.json, data\bybit\NEARUSDT\1m.csv
+
+[Binance] Downloading NEARUSDT 5m ...
+[Binance] NEARUSDT 5m: 1000/5000 (20.0%)
+[Binance] NEARUSDT 5m: 2000/5000 (40.0%)
+[Binance] NEARUSDT 5m: 3000/5000 (60.0%)
+[Binance] NEARUSDT 5m: 4000/5000 (80.0%)
+[Binance] NEARUSDT 5m: 5000/5000 (100.0%)
+[Binance] NEARUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved NEARUSDT 5m → data\binance\NEARUSDT\5m.json, data\binance\NEARUSDT\5m.csv
+
+[Bybit] Downloading NEARUSDT 5m ...
+[Bybit] NEARUSDT 5m: 1000/5000 (20.0%)
+[Bybit] NEARUSDT 5m: 2000/5000 (40.0%)
+[Bybit] NEARUSDT 5m: 3000/5000 (60.0%)
+[Bybit] NEARUSDT 5m: 4000/5000 (80.0%)
+[Bybit] NEARUSDT 5m: 5000/5000 (100.0%)
+[Bybit] NEARUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved NEARUSDT 5m → data\bybit\NEARUSDT\5m.json, data\bybit\NEARUSDT\5m.csv
+
+[Binance] Downloading NEARUSDT 15m ...
+[Binance] NEARUSDT 15m: 1000/5000 (20.0%)
+[Binance] NEARUSDT 15m: 2000/5000 (40.0%)
+[Binance] NEARUSDT 15m: 3000/5000 (60.0%)
+[Binance] NEARUSDT 15m: 4000/5000 (80.0%)
+[Binance] NEARUSDT 15m: 5000/5000 (100.0%)
+[Binance] NEARUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved NEARUSDT 15m → data\binance\NEARUSDT\15m.json, data\binance\NEARUSDT\15m.csv
+
+[Bybit] Downloading NEARUSDT 15m ...
+[Bybit] NEARUSDT 15m: 1000/5000 (20.0%)
+[Bybit] NEARUSDT 15m: 2000/5000 (40.0%)
+[Bybit] NEARUSDT 15m: 3000/5000 (60.0%)
+[Bybit] NEARUSDT 15m: 4000/5000 (80.0%)
+[Bybit] NEARUSDT 15m: 5000/5000 (100.0%)
+[Bybit] NEARUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved NEARUSDT 15m → data\bybit\NEARUSDT\15m.json, data\bybit\NEARUSDT\15m.csv
+
+[Binance] Downloading NEARUSDT 1h ...
+[Binance] NEARUSDT 1h: 1000/5000 (20.0%)
+[Binance] NEARUSDT 1h: 2000/5000 (40.0%)
+[Binance] NEARUSDT 1h: 3000/5000 (60.0%)
+[Binance] NEARUSDT 1h: 4000/5000 (80.0%)
+[Binance] NEARUSDT 1h: 5000/5000 (100.0%)
+[Binance] NEARUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved NEARUSDT 1h → data\binance\NEARUSDT\1h.json, data\binance\NEARUSDT\1h.csv
+
+[Bybit] Downloading NEARUSDT 1h ...
+[Bybit] NEARUSDT 1h: 1000/5000 (20.0%)
+[Bybit] NEARUSDT 1h: 2000/5000 (40.0%)
+[Bybit] NEARUSDT 1h: 3000/5000 (60.0%)
+[Bybit] NEARUSDT 1h: 4000/5000 (80.0%)
+[Bybit] NEARUSDT 1h: 5000/5000 (100.0%)
+[Bybit] NEARUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved NEARUSDT 1h → data\bybit\NEARUSDT\1h.json, data\bybit\NEARUSDT\1h.csv
+
+[Binance] Downloading NEARUSDT 4h ...
+[Binance] NEARUSDT 4h: 1000/5000 (20.0%)
+[Binance] NEARUSDT 4h: 2000/5000 (40.0%)
+[Binance] NEARUSDT 4h: 3000/5000 (60.0%)
+[Binance] NEARUSDT 4h: 4000/5000 (80.0%)
+[Binance] NEARUSDT 4h: 5000/5000 (100.0%)
+[Binance] NEARUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved NEARUSDT 4h → data\binance\NEARUSDT\4h.json, data\binance\NEARUSDT\4h.csv
+
+[Bybit] Downloading NEARUSDT 4h ...
+[Bybit] NEARUSDT 4h: 1000/5000 (20.0%)
+[Bybit] NEARUSDT 4h: 2000/5000 (40.0%)
+[Bybit] NEARUSDT 4h: 3000/5000 (60.0%)
+[Bybit] NEARUSDT 4h: 4000/5000 (80.0%)
+[Bybit] NEARUSDT 4h: 5000/5000 (100.0%)
+[Bybit] NEARUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved NEARUSDT 4h → data\bybit\NEARUSDT\4h.json, data\bybit\NEARUSDT\4h.csv
+
+==============================
+Symbol: SUIUSDT
+==============================
+
+[Binance] Downloading SUIUSDT 1m ...
+[Binance] SUIUSDT 1m: 1000/5000 (20.0%)
+[Binance] SUIUSDT 1m: 2000/5000 (40.0%)
+[Binance] SUIUSDT 1m: 3000/5000 (60.0%)
+[Binance] SUIUSDT 1m: 4000/5000 (80.0%)
+[Binance] SUIUSDT 1m: 5000/5000 (100.0%)
+[Binance] SUIUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved SUIUSDT 1m → data\binance\SUIUSDT\1m.json, data\binance\SUIUSDT\1m.csv
+
+[Bybit] Downloading SUIUSDT 1m ...
+[Bybit] SUIUSDT 1m: 1000/5000 (20.0%)
+[Bybit] SUIUSDT 1m: 2000/5000 (40.0%)
+[Bybit] SUIUSDT 1m: 3000/5000 (60.0%)
+[Bybit] SUIUSDT 1m: 4000/5000 (80.0%)
+[Bybit] SUIUSDT 1m: 5000/5000 (100.0%)
+[Bybit] SUIUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved SUIUSDT 1m → data\bybit\SUIUSDT\1m.json, data\bybit\SUIUSDT\1m.csv
+
+[Binance] Downloading SUIUSDT 5m ...
+[Binance] SUIUSDT 5m: 1000/5000 (20.0%)
+[Binance] SUIUSDT 5m: 2000/5000 (40.0%)
+[Binance] SUIUSDT 5m: 3000/5000 (60.0%)
+[Binance] SUIUSDT 5m: 4000/5000 (80.0%)
+[Binance] SUIUSDT 5m: 5000/5000 (100.0%)
+[Binance] SUIUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved SUIUSDT 5m → data\binance\SUIUSDT\5m.json, data\binance\SUIUSDT\5m.csv
+
+[Bybit] Downloading SUIUSDT 5m ...
+[Bybit] SUIUSDT 5m: 1000/5000 (20.0%)
+[Bybit] SUIUSDT 5m: 2000/5000 (40.0%)
+[Bybit] SUIUSDT 5m: 3000/5000 (60.0%)
+[Bybit] SUIUSDT 5m: 4000/5000 (80.0%)
+[Bybit] SUIUSDT 5m: 5000/5000 (100.0%)
+[Bybit] SUIUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved SUIUSDT 5m → data\bybit\SUIUSDT\5m.json, data\bybit\SUIUSDT\5m.csv
+
+[Binance] Downloading SUIUSDT 15m ...
+[Binance] SUIUSDT 15m: 1000/5000 (20.0%)
+[Binance] SUIUSDT 15m: 2000/5000 (40.0%)
+[Binance] SUIUSDT 15m: 3000/5000 (60.0%)
+[Binance] SUIUSDT 15m: 4000/5000 (80.0%)
+[Binance] SUIUSDT 15m: 5000/5000 (100.0%)
+[Binance] SUIUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved SUIUSDT 15m → data\binance\SUIUSDT\15m.json, data\binance\SUIUSDT\15m.csv
+
+[Bybit] Downloading SUIUSDT 15m ...
+[Bybit] SUIUSDT 15m: 1000/5000 (20.0%)
+[Bybit] SUIUSDT 15m: 2000/5000 (40.0%)
+[Bybit] SUIUSDT 15m: 3000/5000 (60.0%)
+[Bybit] SUIUSDT 15m: 4000/5000 (80.0%)
+[Bybit] SUIUSDT 15m: 5000/5000 (100.0%)
+[Bybit] SUIUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved SUIUSDT 15m → data\bybit\SUIUSDT\15m.json, data\bybit\SUIUSDT\15m.csv
+
+[Binance] Downloading SUIUSDT 1h ...
+[Binance] SUIUSDT 1h: 1000/5000 (20.0%)
+[Binance] SUIUSDT 1h: 2000/5000 (40.0%)
+[Binance] SUIUSDT 1h: 3000/5000 (60.0%)
+[Binance] SUIUSDT 1h: 4000/5000 (80.0%)
+[Binance] SUIUSDT 1h: 5000/5000 (100.0%)
+[Binance] SUIUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved SUIUSDT 1h → data\binance\SUIUSDT\1h.json, data\binance\SUIUSDT\1h.csv
+
+[Bybit] Downloading SUIUSDT 1h ...
+[Bybit] SUIUSDT 1h: 1000/5000 (20.0%)
+[Bybit] SUIUSDT 1h: 2000/5000 (40.0%)
+[Bybit] SUIUSDT 1h: 3000/5000 (60.0%)
+[Bybit] SUIUSDT 1h: 4000/5000 (80.0%)
+[Bybit] SUIUSDT 1h: 5000/5000 (100.0%)
+[Bybit] SUIUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved SUIUSDT 1h → data\bybit\SUIUSDT\1h.json, data\bybit\SUIUSDT\1h.csv
+
+[Binance] Downloading SUIUSDT 4h ...
+[Binance] SUIUSDT 4h: 1000/5000 (20.0%)
+[Binance] SUIUSDT 4h: 2000/5000 (40.0%)
+[Binance] SUIUSDT 4h: 3000/5000 (60.0%)
+[Binance] SUIUSDT 4h: 4000/5000 (80.0%)
+[Binance] SUIUSDT 4h: 5000/5000 (100.0%)
+[Binance] SUIUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved SUIUSDT 4h → data\binance\SUIUSDT\4h.json, data\binance\SUIUSDT\4h.csv
+
+[Bybit] Downloading SUIUSDT 4h ...
+[Bybit] SUIUSDT 4h: 1000/5000 (20.0%)
+[Bybit] SUIUSDT 4h: 2000/5000 (40.0%)
+[Bybit] SUIUSDT 4h: 3000/5000 (60.0%)
+[Bybit] SUIUSDT 4h: 4000/5000 (80.0%)
+[Bybit] SUIUSDT 4h: 5000/5000 (100.0%)
+[Bybit] SUIUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved SUIUSDT 4h → data\bybit\SUIUSDT\4h.json, data\bybit\SUIUSDT\4h.csv
+
+==============================
+Symbol: APTUSDT
+==============================
+
+[Binance] Downloading APTUSDT 1m ...
+[Binance] APTUSDT 1m: 1000/5000 (20.0%)
+[Binance] APTUSDT 1m: 2000/5000 (40.0%)
+[Binance] APTUSDT 1m: 3000/5000 (60.0%)
+[Binance] APTUSDT 1m: 4000/5000 (80.0%)
+Request error (https://api.binance.com/api/v3/klines): HTTPSConnectionPool(host='api.binance.com', port=443): Read timed out. (read timeout=10) | retry 1/5
+[Binance] APTUSDT 1m: 5000/5000 (100.0%)
+[Binance] APTUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved APTUSDT 1m → data\binance\APTUSDT\1m.json, data\binance\APTUSDT\1m.csv
+
+[Bybit] Downloading APTUSDT 1m ...
+[Bybit] APTUSDT 1m: 1000/5000 (20.0%)
+[Bybit] APTUSDT 1m: 2000/5000 (40.0%)
+[Bybit] APTUSDT 1m: 3000/5000 (60.0%)
+[Bybit] APTUSDT 1m: 4000/5000 (80.0%)
+[Bybit] APTUSDT 1m: 5000/5000 (100.0%)
+[Bybit] APTUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved APTUSDT 1m → data\bybit\APTUSDT\1m.json, data\bybit\APTUSDT\1m.csv
+
+[Binance] Downloading APTUSDT 5m ...
+[Binance] APTUSDT 5m: 1000/5000 (20.0%)
+[Binance] APTUSDT 5m: 2000/5000 (40.0%)
+[Binance] APTUSDT 5m: 3000/5000 (60.0%)
+[Binance] APTUSDT 5m: 4000/5000 (80.0%)
+[Binance] APTUSDT 5m: 5000/5000 (100.0%)
+[Binance] APTUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved APTUSDT 5m → data\binance\APTUSDT\5m.json, data\binance\APTUSDT\5m.csv
+
+[Bybit] Downloading APTUSDT 5m ...
+[Bybit] APTUSDT 5m: 1000/5000 (20.0%)
+[Bybit] APTUSDT 5m: 2000/5000 (40.0%)
+[Bybit] APTUSDT 5m: 3000/5000 (60.0%)
+[Bybit] APTUSDT 5m: 4000/5000 (80.0%)
+[Bybit] APTUSDT 5m: 5000/5000 (100.0%)
+[Bybit] APTUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved APTUSDT 5m → data\bybit\APTUSDT\5m.json, data\bybit\APTUSDT\5m.csv
+
+[Binance] Downloading APTUSDT 15m ...
+[Binance] APTUSDT 15m: 1000/5000 (20.0%)
+[Binance] APTUSDT 15m: 2000/5000 (40.0%)
+[Binance] APTUSDT 15m: 3000/5000 (60.0%)
+[Binance] APTUSDT 15m: 4000/5000 (80.0%)
+[Binance] APTUSDT 15m: 5000/5000 (100.0%)
+[Binance] APTUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved APTUSDT 15m → data\binance\APTUSDT\15m.json, data\binance\APTUSDT\15m.csv
+
+[Bybit] Downloading APTUSDT 15m ...
+[Bybit] APTUSDT 15m: 1000/5000 (20.0%)
+[Bybit] APTUSDT 15m: 2000/5000 (40.0%)
+[Bybit] APTUSDT 15m: 3000/5000 (60.0%)
+[Bybit] APTUSDT 15m: 4000/5000 (80.0%)
+[Bybit] APTUSDT 15m: 5000/5000 (100.0%)
+[Bybit] APTUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved APTUSDT 15m → data\bybit\APTUSDT\15m.json, data\bybit\APTUSDT\15m.csv
+
+[Binance] Downloading APTUSDT 1h ...
+[Binance] APTUSDT 1h: 1000/5000 (20.0%)
+[Binance] APTUSDT 1h: 2000/5000 (40.0%)
+[Binance] APTUSDT 1h: 3000/5000 (60.0%)
+[Binance] APTUSDT 1h: 4000/5000 (80.0%)
+[Binance] APTUSDT 1h: 5000/5000 (100.0%)
+[Binance] APTUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved APTUSDT 1h → data\binance\APTUSDT\1h.json, data\binance\APTUSDT\1h.csv
+
+[Bybit] Downloading APTUSDT 1h ...
+[Bybit] APTUSDT 1h: 1000/5000 (20.0%)
+[Bybit] APTUSDT 1h: 2000/5000 (40.0%)
+[Bybit] APTUSDT 1h: 3000/5000 (60.0%)
+[Bybit] APTUSDT 1h: 4000/5000 (80.0%)
+[Bybit] APTUSDT 1h: 5000/5000 (100.0%)
+[Bybit] APTUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved APTUSDT 1h → data\bybit\APTUSDT\1h.json, data\bybit\APTUSDT\1h.csv
+
+[Binance] Downloading APTUSDT 4h ...
+[Binance] APTUSDT 4h: 1000/5000 (20.0%)
+[Binance] APTUSDT 4h: 2000/5000 (40.0%)
+[Binance] APTUSDT 4h: 3000/5000 (60.0%)
+[Binance] APTUSDT 4h: 4000/5000 (80.0%)
+[Binance] APTUSDT 4h: 5000/5000 (100.0%)
+[Binance] APTUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved APTUSDT 4h → data\binance\APTUSDT\4h.json, data\binance\APTUSDT\4h.csv
+
+[Bybit] Downloading APTUSDT 4h ...
+[Bybit] APTUSDT 4h: 1000/5000 (20.0%)
+[Bybit] APTUSDT 4h: 2000/5000 (40.0%)
+[Bybit] APTUSDT 4h: 3000/5000 (60.0%)
+[Bybit] APTUSDT 4h: 4000/5000 (80.0%)
+[Bybit] APTUSDT 4h: 5000/5000 (100.0%)
+[Bybit] APTUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved APTUSDT 4h → data\bybit\APTUSDT\4h.json, data\bybit\APTUSDT\4h.csv
+
+==============================
+Symbol: MATICUSDT
+==============================
+
+[Binance] Downloading MATICUSDT 1m ...
+[Binance] MATICUSDT 1m: 1000/5000 (20.0%)
+[Binance] MATICUSDT 1m: 2000/5000 (40.0%)
+[Binance] MATICUSDT 1m: 3000/5000 (60.0%)
+[Binance] MATICUSDT 1m: 4000/5000 (80.0%)
+[Binance] MATICUSDT 1m: 5000/5000 (100.0%)
+[Binance] MATICUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved MATICUSDT 1m → data\binance\MATICUSDT\1m.json, data\binance\MATICUSDT\1m.csv
+
+[Bybit] Downloading MATICUSDT 1m ...
+[Bybit] Empty list, end of history.
+[Bybit] MATICUSDT 1m DONE. Total: 0 candles.
+[bybit] No candles to save for MATICUSDT 1m
+
+[Binance] Downloading MATICUSDT 5m ...
+[Binance] MATICUSDT 5m: 1000/5000 (20.0%)
+[Binance] MATICUSDT 5m: 2000/5000 (40.0%)
+[Binance] MATICUSDT 5m: 3000/5000 (60.0%)
+[Binance] MATICUSDT 5m: 4000/5000 (80.0%)
+[Binance] MATICUSDT 5m: 5000/5000 (100.0%)
+[Binance] MATICUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved MATICUSDT 5m → data\binance\MATICUSDT\5m.json, data\binance\MATICUSDT\5m.csv
+
+[Bybit] Downloading MATICUSDT 5m ...
+[Bybit] Empty list, end of history.
+[Bybit] MATICUSDT 5m DONE. Total: 0 candles.
+[bybit] No candles to save for MATICUSDT 5m
+
+[Binance] Downloading MATICUSDT 15m ...
+[Binance] MATICUSDT 15m: 1000/5000 (20.0%)
+[Binance] MATICUSDT 15m: 2000/5000 (40.0%)
+[Binance] MATICUSDT 15m: 3000/5000 (60.0%)
+[Binance] MATICUSDT 15m: 4000/5000 (80.0%)
+[Binance] MATICUSDT 15m: 5000/5000 (100.0%)
+[Binance] MATICUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved MATICUSDT 15m → data\binance\MATICUSDT\15m.json, data\binance\MATICUSDT\15m.csv
+
+[Bybit] Downloading MATICUSDT 15m ...
+[Bybit] Empty list, end of history.
+[Bybit] MATICUSDT 15m DONE. Total: 0 candles.
+[bybit] No candles to save for MATICUSDT 15m
+
+[Binance] Downloading MATICUSDT 1h ...
+[Binance] MATICUSDT 1h: 1000/5000 (20.0%)
+[Binance] MATICUSDT 1h: 2000/5000 (40.0%)
+[Binance] MATICUSDT 1h: 3000/5000 (60.0%)
+[Binance] MATICUSDT 1h: 4000/5000 (80.0%)
+[Binance] MATICUSDT 1h: 5000/5000 (100.0%)
+[Binance] MATICUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved MATICUSDT 1h → data\binance\MATICUSDT\1h.json, data\binance\MATICUSDT\1h.csv
+
+[Bybit] Downloading MATICUSDT 1h ...
+[Bybit] Empty list, end of history.
+[Bybit] MATICUSDT 1h DONE. Total: 0 candles.
+[bybit] No candles to save for MATICUSDT 1h
+
+[Binance] Downloading MATICUSDT 4h ...
+[Binance] MATICUSDT 4h: 1000/5000 (20.0%)
+[Binance] MATICUSDT 4h: 2000/5000 (40.0%)
+[Binance] MATICUSDT 4h: 3000/5000 (60.0%)
+[Binance] MATICUSDT 4h: 4000/5000 (80.0%)
+[Binance] MATICUSDT 4h: 5000/5000 (100.0%)
+[Binance] MATICUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved MATICUSDT 4h → data\binance\MATICUSDT\4h.json, data\binance\MATICUSDT\4h.csv
+
+[Bybit] Downloading MATICUSDT 4h ...
+[Bybit] Empty list, end of history.
+[Bybit] MATICUSDT 4h DONE. Total: 0 candles.
+[bybit] No candles to save for MATICUSDT 4h
+
+==============================
+Symbol: LTCUSDT
+==============================
+
+[Binance] Downloading LTCUSDT 1m ...
+[Binance] LTCUSDT 1m: 1000/5000 (20.0%)
+[Binance] LTCUSDT 1m: 2000/5000 (40.0%)
+[Binance] LTCUSDT 1m: 3000/5000 (60.0%)
+[Binance] LTCUSDT 1m: 4000/5000 (80.0%)
+[Binance] LTCUSDT 1m: 5000/5000 (100.0%)
+[Binance] LTCUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved LTCUSDT 1m → data\binance\LTCUSDT\1m.json, data\binance\LTCUSDT\1m.csv
+
+[Bybit] Downloading LTCUSDT 1m ...
+[Bybit] LTCUSDT 1m: 1000/5000 (20.0%)
+[Bybit] LTCUSDT 1m: 2000/5000 (40.0%)
+[Bybit] LTCUSDT 1m: 3000/5000 (60.0%)
+[Bybit] LTCUSDT 1m: 4000/5000 (80.0%)
+[Bybit] LTCUSDT 1m: 5000/5000 (100.0%)
+[Bybit] LTCUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved LTCUSDT 1m → data\bybit\LTCUSDT\1m.json, data\bybit\LTCUSDT\1m.csv
+
+[Binance] Downloading LTCUSDT 5m ...
+[Binance] LTCUSDT 5m: 1000/5000 (20.0%)
+[Binance] LTCUSDT 5m: 2000/5000 (40.0%)
+[Binance] LTCUSDT 5m: 3000/5000 (60.0%)
+[Binance] LTCUSDT 5m: 4000/5000 (80.0%)
+[Binance] LTCUSDT 5m: 5000/5000 (100.0%)
+[Binance] LTCUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved LTCUSDT 5m → data\binance\LTCUSDT\5m.json, data\binance\LTCUSDT\5m.csv
+
+[Bybit] Downloading LTCUSDT 5m ...
+[Bybit] LTCUSDT 5m: 1000/5000 (20.0%)
+[Bybit] LTCUSDT 5m: 2000/5000 (40.0%)
+[Bybit] LTCUSDT 5m: 3000/5000 (60.0%)
+[Bybit] LTCUSDT 5m: 4000/5000 (80.0%)
+[Bybit] LTCUSDT 5m: 5000/5000 (100.0%)
+[Bybit] LTCUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved LTCUSDT 5m → data\bybit\LTCUSDT\5m.json, data\bybit\LTCUSDT\5m.csv
+
+[Binance] Downloading LTCUSDT 15m ...
+[Binance] LTCUSDT 15m: 1000/5000 (20.0%)
+[Binance] LTCUSDT 15m: 2000/5000 (40.0%)
+[Binance] LTCUSDT 15m: 3000/5000 (60.0%)
+[Binance] LTCUSDT 15m: 4000/5000 (80.0%)
+[Binance] LTCUSDT 15m: 5000/5000 (100.0%)
+[Binance] LTCUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved LTCUSDT 15m → data\binance\LTCUSDT\15m.json, data\binance\LTCUSDT\15m.csv
+
+[Bybit] Downloading LTCUSDT 15m ...
+[Bybit] LTCUSDT 15m: 1000/5000 (20.0%)
+[Bybit] LTCUSDT 15m: 2000/5000 (40.0%)
+[Bybit] LTCUSDT 15m: 3000/5000 (60.0%)
+[Bybit] LTCUSDT 15m: 4000/5000 (80.0%)
+[Bybit] LTCUSDT 15m: 5000/5000 (100.0%)
+[Bybit] LTCUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved LTCUSDT 15m → data\bybit\LTCUSDT\15m.json, data\bybit\LTCUSDT\15m.csv
+
+[Binance] Downloading LTCUSDT 1h ...
+[Binance] LTCUSDT 1h: 1000/5000 (20.0%)
+[Binance] LTCUSDT 1h: 2000/5000 (40.0%)
+[Binance] LTCUSDT 1h: 3000/5000 (60.0%)
+[Binance] LTCUSDT 1h: 4000/5000 (80.0%)
+[Binance] LTCUSDT 1h: 5000/5000 (100.0%)
+[Binance] LTCUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved LTCUSDT 1h → data\binance\LTCUSDT\1h.json, data\binance\LTCUSDT\1h.csv
+
+[Bybit] Downloading LTCUSDT 1h ...
+[Bybit] LTCUSDT 1h: 1000/5000 (20.0%)
+[Bybit] LTCUSDT 1h: 2000/5000 (40.0%)
+[Bybit] LTCUSDT 1h: 3000/5000 (60.0%)
+[Bybit] LTCUSDT 1h: 4000/5000 (80.0%)
+[Bybit] LTCUSDT 1h: 5000/5000 (100.0%)
+[Bybit] LTCUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved LTCUSDT 1h → data\bybit\LTCUSDT\1h.json, data\bybit\LTCUSDT\1h.csv
+
+[Binance] Downloading LTCUSDT 4h ...
+[Binance] LTCUSDT 4h: 1000/5000 (20.0%)
+[Binance] LTCUSDT 4h: 2000/5000 (40.0%)
+[Binance] LTCUSDT 4h: 3000/5000 (60.0%)
+[Binance] LTCUSDT 4h: 4000/5000 (80.0%)
+[Binance] LTCUSDT 4h: 5000/5000 (100.0%)
+[Binance] LTCUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved LTCUSDT 4h → data\binance\LTCUSDT\4h.json, data\binance\LTCUSDT\4h.csv
+
+[Bybit] Downloading LTCUSDT 4h ...
+[Bybit] LTCUSDT 4h: 1000/5000 (20.0%)
+[Bybit] LTCUSDT 4h: 2000/5000 (40.0%)
+[Bybit] LTCUSDT 4h: 3000/5000 (60.0%)
+[Bybit] LTCUSDT 4h: 4000/5000 (80.0%)
+[Bybit] LTCUSDT 4h: 5000/5000 (100.0%)
+[Bybit] LTCUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved LTCUSDT 4h → data\bybit\LTCUSDT\4h.json, data\bybit\LTCUSDT\4h.csv
+
+==============================
+Symbol: UNIUSDT
+==============================
+
+[Binance] Downloading UNIUSDT 1m ...
+[Binance] UNIUSDT 1m: 1000/5000 (20.0%)
+[Binance] UNIUSDT 1m: 2000/5000 (40.0%)
+[Binance] UNIUSDT 1m: 3000/5000 (60.0%)
+[Binance] UNIUSDT 1m: 4000/5000 (80.0%)
+[Binance] UNIUSDT 1m: 5000/5000 (100.0%)
+[Binance] UNIUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved UNIUSDT 1m → data\binance\UNIUSDT\1m.json, data\binance\UNIUSDT\1m.csv
+
+[Bybit] Downloading UNIUSDT 1m ...
+[Bybit] UNIUSDT 1m: 1000/5000 (20.0%)
+[Bybit] UNIUSDT 1m: 2000/5000 (40.0%)
+[Bybit] UNIUSDT 1m: 3000/5000 (60.0%)
+[Bybit] UNIUSDT 1m: 4000/5000 (80.0%)
+[Bybit] UNIUSDT 1m: 5000/5000 (100.0%)
+[Bybit] UNIUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved UNIUSDT 1m → data\bybit\UNIUSDT\1m.json, data\bybit\UNIUSDT\1m.csv
+
+[Binance] Downloading UNIUSDT 5m ...
+[Binance] UNIUSDT 5m: 1000/5000 (20.0%)
+[Binance] UNIUSDT 5m: 2000/5000 (40.0%)
+[Binance] UNIUSDT 5m: 3000/5000 (60.0%)
+[Binance] UNIUSDT 5m: 4000/5000 (80.0%)
+[Binance] UNIUSDT 5m: 5000/5000 (100.0%)
+[Binance] UNIUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved UNIUSDT 5m → data\binance\UNIUSDT\5m.json, data\binance\UNIUSDT\5m.csv
+
+[Bybit] Downloading UNIUSDT 5m ...
+[Bybit] UNIUSDT 5m: 1000/5000 (20.0%)
+[Bybit] UNIUSDT 5m: 2000/5000 (40.0%)
+[Bybit] UNIUSDT 5m: 3000/5000 (60.0%)
+[Bybit] UNIUSDT 5m: 4000/5000 (80.0%)
+[Bybit] UNIUSDT 5m: 5000/5000 (100.0%)
+[Bybit] UNIUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved UNIUSDT 5m → data\bybit\UNIUSDT\5m.json, data\bybit\UNIUSDT\5m.csv
+
+[Binance] Downloading UNIUSDT 15m ...
+[Binance] UNIUSDT 15m: 1000/5000 (20.0%)
+[Binance] UNIUSDT 15m: 2000/5000 (40.0%)
+[Binance] UNIUSDT 15m: 3000/5000 (60.0%)
+[Binance] UNIUSDT 15m: 4000/5000 (80.0%)
+[Binance] UNIUSDT 15m: 5000/5000 (100.0%)
+[Binance] UNIUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved UNIUSDT 15m → data\binance\UNIUSDT\15m.json, data\binance\UNIUSDT\15m.csv
+
+[Bybit] Downloading UNIUSDT 15m ...
+[Bybit] UNIUSDT 15m: 1000/5000 (20.0%)
+[Bybit] UNIUSDT 15m: 2000/5000 (40.0%)
+[Bybit] UNIUSDT 15m: 3000/5000 (60.0%)
+[Bybit] UNIUSDT 15m: 4000/5000 (80.0%)
+[Bybit] UNIUSDT 15m: 5000/5000 (100.0%)
+[Bybit] UNIUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved UNIUSDT 15m → data\bybit\UNIUSDT\15m.json, data\bybit\UNIUSDT\15m.csv
+
+[Binance] Downloading UNIUSDT 1h ...
+[Binance] UNIUSDT 1h: 1000/5000 (20.0%)
+[Binance] UNIUSDT 1h: 2000/5000 (40.0%)
+[Binance] UNIUSDT 1h: 3000/5000 (60.0%)
+[Binance] UNIUSDT 1h: 4000/5000 (80.0%)
+[Binance] UNIUSDT 1h: 5000/5000 (100.0%)
+[Binance] UNIUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved UNIUSDT 1h → data\binance\UNIUSDT\1h.json, data\binance\UNIUSDT\1h.csv
+
+[Bybit] Downloading UNIUSDT 1h ...
+[Bybit] UNIUSDT 1h: 1000/5000 (20.0%)
+[Bybit] UNIUSDT 1h: 2000/5000 (40.0%)
+[Bybit] UNIUSDT 1h: 3000/5000 (60.0%)
+[Bybit] UNIUSDT 1h: 4000/5000 (80.0%)
+[Bybit] UNIUSDT 1h: 5000/5000 (100.0%)
+[Bybit] UNIUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved UNIUSDT 1h → data\bybit\UNIUSDT\1h.json, data\bybit\UNIUSDT\1h.csv
+
+[Binance] Downloading UNIUSDT 4h ...
+[Binance] UNIUSDT 4h: 1000/5000 (20.0%)
+[Binance] UNIUSDT 4h: 2000/5000 (40.0%)
+[Binance] UNIUSDT 4h: 3000/5000 (60.0%)
+[Binance] UNIUSDT 4h: 4000/5000 (80.0%)
+[Binance] UNIUSDT 4h: 5000/5000 (100.0%)
+[Binance] UNIUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved UNIUSDT 4h → data\binance\UNIUSDT\4h.json, data\binance\UNIUSDT\4h.csv
+
+[Bybit] Downloading UNIUSDT 4h ...
+[Bybit] UNIUSDT 4h: 1000/5000 (20.0%)
+[Bybit] UNIUSDT 4h: 2000/5000 (40.0%)
+[Bybit] UNIUSDT 4h: 3000/5000 (60.0%)
+[Bybit] UNIUSDT 4h: 4000/5000 (80.0%)
+[Bybit] UNIUSDT 4h: 5000/5000 (100.0%)
+[Bybit] UNIUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved UNIUSDT 4h → data\bybit\UNIUSDT\4h.json, data\bybit\UNIUSDT\4h.csv
+
+==============================
+Symbol: INJUSDT
+==============================
+
+[Binance] Downloading INJUSDT 1m ...
+[Binance] INJUSDT 1m: 1000/5000 (20.0%)
+[Binance] INJUSDT 1m: 2000/5000 (40.0%)
+[Binance] INJUSDT 1m: 3000/5000 (60.0%)
+[Binance] INJUSDT 1m: 4000/5000 (80.0%)
+[Binance] INJUSDT 1m: 5000/5000 (100.0%)
+[Binance] INJUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved INJUSDT 1m → data\binance\INJUSDT\1m.json, data\binance\INJUSDT\1m.csv
+
+[Bybit] Downloading INJUSDT 1m ...
+[Bybit] INJUSDT 1m: 1000/5000 (20.0%)
+[Bybit] INJUSDT 1m: 2000/5000 (40.0%)
+[Bybit] INJUSDT 1m: 3000/5000 (60.0%)
+[Bybit] INJUSDT 1m: 4000/5000 (80.0%)
+[Bybit] INJUSDT 1m: 5000/5000 (100.0%)
+[Bybit] INJUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved INJUSDT 1m → data\bybit\INJUSDT\1m.json, data\bybit\INJUSDT\1m.csv
+
+[Binance] Downloading INJUSDT 5m ...
+[Binance] INJUSDT 5m: 1000/5000 (20.0%)
+[Binance] INJUSDT 5m: 2000/5000 (40.0%)
+[Binance] INJUSDT 5m: 3000/5000 (60.0%)
+[Binance] INJUSDT 5m: 4000/5000 (80.0%)
+[Binance] INJUSDT 5m: 5000/5000 (100.0%)
+[Binance] INJUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved INJUSDT 5m → data\binance\INJUSDT\5m.json, data\binance\INJUSDT\5m.csv
+
+[Bybit] Downloading INJUSDT 5m ...
+[Bybit] INJUSDT 5m: 1000/5000 (20.0%)
+[Bybit] INJUSDT 5m: 2000/5000 (40.0%)
+[Bybit] INJUSDT 5m: 3000/5000 (60.0%)
+[Bybit] INJUSDT 5m: 4000/5000 (80.0%)
+[Bybit] INJUSDT 5m: 5000/5000 (100.0%)
+[Bybit] INJUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved INJUSDT 5m → data\bybit\INJUSDT\5m.json, data\bybit\INJUSDT\5m.csv
+
+[Binance] Downloading INJUSDT 15m ...
+[Binance] INJUSDT 15m: 1000/5000 (20.0%)
+[Binance] INJUSDT 15m: 2000/5000 (40.0%)
+[Binance] INJUSDT 15m: 3000/5000 (60.0%)
+[Binance] INJUSDT 15m: 4000/5000 (80.0%)
+[Binance] INJUSDT 15m: 5000/5000 (100.0%)
+[Binance] INJUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved INJUSDT 15m → data\binance\INJUSDT\15m.json, data\binance\INJUSDT\15m.csv
+
+[Bybit] Downloading INJUSDT 15m ...
+[Bybit] INJUSDT 15m: 1000/5000 (20.0%)
+[Bybit] INJUSDT 15m: 2000/5000 (40.0%)
+[Bybit] INJUSDT 15m: 3000/5000 (60.0%)
+[Bybit] INJUSDT 15m: 4000/5000 (80.0%)
+[Bybit] INJUSDT 15m: 5000/5000 (100.0%)
+[Bybit] INJUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved INJUSDT 15m → data\bybit\INJUSDT\15m.json, data\bybit\INJUSDT\15m.csv
+
+[Binance] Downloading INJUSDT 1h ...
+[Binance] INJUSDT 1h: 1000/5000 (20.0%)
+[Binance] INJUSDT 1h: 2000/5000 (40.0%)
+[Binance] INJUSDT 1h: 3000/5000 (60.0%)
+[Binance] INJUSDT 1h: 4000/5000 (80.0%)
+[Binance] INJUSDT 1h: 5000/5000 (100.0%)
+[Binance] INJUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved INJUSDT 1h → data\binance\INJUSDT\1h.json, data\binance\INJUSDT\1h.csv
+
+[Bybit] Downloading INJUSDT 1h ...
+[Bybit] INJUSDT 1h: 1000/5000 (20.0%)
+[Bybit] INJUSDT 1h: 2000/5000 (40.0%)
+[Bybit] INJUSDT 1h: 3000/5000 (60.0%)
+[Bybit] INJUSDT 1h: 4000/5000 (80.0%)
+[Bybit] INJUSDT 1h: 5000/5000 (100.0%)
+[Bybit] INJUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved INJUSDT 1h → data\bybit\INJUSDT\1h.json, data\bybit\INJUSDT\1h.csv
+
+[Binance] Downloading INJUSDT 4h ...
+[Binance] INJUSDT 4h: 1000/5000 (20.0%)
+[Binance] INJUSDT 4h: 2000/5000 (40.0%)
+[Binance] INJUSDT 4h: 3000/5000 (60.0%)
+[Binance] INJUSDT 4h: 4000/5000 (80.0%)
+[Binance] INJUSDT 4h: 5000/5000 (100.0%)
+[Binance] INJUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved INJUSDT 4h → data\binance\INJUSDT\4h.json, data\binance\INJUSDT\4h.csv
+
+[Bybit] Downloading INJUSDT 4h ...
+[Bybit] INJUSDT 4h: 1000/5000 (20.0%)
+[Bybit] INJUSDT 4h: 2000/5000 (40.0%)
+[Bybit] INJUSDT 4h: 3000/5000 (60.0%)
+[Bybit] INJUSDT 4h: 4000/5000 (80.0%)
+[Bybit] INJUSDT 4h: 5000/5000 (100.0%)
+[Bybit] INJUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved INJUSDT 4h → data\bybit\INJUSDT\4h.json, data\bybit\INJUSDT\4h.csv
+
+==============================
+Symbol: RUNEUSDT
+==============================
+
+[Binance] Downloading RUNEUSDT 1m ...
+[Binance] RUNEUSDT 1m: 1000/5000 (20.0%)
+[Binance] RUNEUSDT 1m: 2000/5000 (40.0%)
+[Binance] RUNEUSDT 1m: 3000/5000 (60.0%)
+[Binance] RUNEUSDT 1m: 4000/5000 (80.0%)
+[Binance] RUNEUSDT 1m: 5000/5000 (100.0%)
+[Binance] RUNEUSDT 1m DONE. Total: 5000 candles.
+[binance] Saved RUNEUSDT 1m → data\binance\RUNEUSDT\1m.json, data\binance\RUNEUSDT\1m.csv
+
+[Bybit] Downloading RUNEUSDT 1m ...
+[Bybit] RUNEUSDT 1m: 1000/5000 (20.0%)
+[Bybit] RUNEUSDT 1m: 2000/5000 (40.0%)
+[Bybit] RUNEUSDT 1m: 3000/5000 (60.0%)
+[Bybit] RUNEUSDT 1m: 4000/5000 (80.0%)
+[Bybit] RUNEUSDT 1m: 5000/5000 (100.0%)
+[Bybit] RUNEUSDT 1m DONE. Total: 5000 candles.
+[bybit] Saved RUNEUSDT 1m → data\bybit\RUNEUSDT\1m.json, data\bybit\RUNEUSDT\1m.csv
+
+[Binance] Downloading RUNEUSDT 5m ...
+[Binance] RUNEUSDT 5m: 1000/5000 (20.0%)
+[Binance] RUNEUSDT 5m: 2000/5000 (40.0%)
+[Binance] RUNEUSDT 5m: 3000/5000 (60.0%)
+[Binance] RUNEUSDT 5m: 4000/5000 (80.0%)
+[Binance] RUNEUSDT 5m: 5000/5000 (100.0%)
+[Binance] RUNEUSDT 5m DONE. Total: 5000 candles.
+[binance] Saved RUNEUSDT 5m → data\binance\RUNEUSDT\5m.json, data\binance\RUNEUSDT\5m.csv
+
+[Bybit] Downloading RUNEUSDT 5m ...
+[Bybit] RUNEUSDT 5m: 1000/5000 (20.0%)
+[Bybit] RUNEUSDT 5m: 2000/5000 (40.0%)
+[Bybit] RUNEUSDT 5m: 3000/5000 (60.0%)
+[Bybit] RUNEUSDT 5m: 4000/5000 (80.0%)
+[Bybit] RUNEUSDT 5m: 5000/5000 (100.0%)
+[Bybit] RUNEUSDT 5m DONE. Total: 5000 candles.
+[bybit] Saved RUNEUSDT 5m → data\bybit\RUNEUSDT\5m.json, data\bybit\RUNEUSDT\5m.csv
+
+[Binance] Downloading RUNEUSDT 15m ...
+[Binance] RUNEUSDT 15m: 1000/5000 (20.0%)
+[Binance] RUNEUSDT 15m: 2000/5000 (40.0%)
+[Binance] RUNEUSDT 15m: 3000/5000 (60.0%)
+[Binance] RUNEUSDT 15m: 4000/5000 (80.0%)
+[Binance] RUNEUSDT 15m: 5000/5000 (100.0%)
+[Binance] RUNEUSDT 15m DONE. Total: 5000 candles.
+[binance] Saved RUNEUSDT 15m → data\binance\RUNEUSDT\15m.json, data\binance\RUNEUSDT\15m.csv
+
+[Bybit] Downloading RUNEUSDT 15m ...
+[Bybit] RUNEUSDT 15m: 1000/5000 (20.0%)
+[Bybit] RUNEUSDT 15m: 2000/5000 (40.0%)
+[Bybit] RUNEUSDT 15m: 3000/5000 (60.0%)
+[Bybit] RUNEUSDT 15m: 4000/5000 (80.0%)
+[Bybit] RUNEUSDT 15m: 5000/5000 (100.0%)
+[Bybit] RUNEUSDT 15m DONE. Total: 5000 candles.
+[bybit] Saved RUNEUSDT 15m → data\bybit\RUNEUSDT\15m.json, data\bybit\RUNEUSDT\15m.csv
+
+[Binance] Downloading RUNEUSDT 1h ...
+[Binance] RUNEUSDT 1h: 1000/5000 (20.0%)
+[Binance] RUNEUSDT 1h: 2000/5000 (40.0%)
+[Binance] RUNEUSDT 1h: 3000/5000 (60.0%)
+[Binance] RUNEUSDT 1h: 4000/5000 (80.0%)
+[Binance] RUNEUSDT 1h: 5000/5000 (100.0%)
+[Binance] RUNEUSDT 1h DONE. Total: 5000 candles.
+[binance] Saved RUNEUSDT 1h → data\binance\RUNEUSDT\1h.json, data\binance\RUNEUSDT\1h.csv
+
+[Bybit] Downloading RUNEUSDT 1h ...
+[Bybit] RUNEUSDT 1h: 1000/5000 (20.0%)
+[Bybit] RUNEUSDT 1h: 2000/5000 (40.0%)
+[Bybit] RUNEUSDT 1h: 3000/5000 (60.0%)
+[Bybit] RUNEUSDT 1h: 4000/5000 (80.0%)
+[Bybit] RUNEUSDT 1h: 5000/5000 (100.0%)
+[Bybit] RUNEUSDT 1h DONE. Total: 5000 candles.
+[bybit] Saved RUNEUSDT 1h → data\bybit\RUNEUSDT\1h.json, data\bybit\RUNEUSDT\1h.csv
+
+[Binance] Downloading RUNEUSDT 4h ...
+[Binance] RUNEUSDT 4h: 1000/5000 (20.0%)
+[Binance] RUNEUSDT 4h: 2000/5000 (40.0%)
+[Binance] RUNEUSDT 4h: 3000/5000 (60.0%)
+[Binance] RUNEUSDT 4h: 4000/5000 (80.0%)
+[Binance] RUNEUSDT 4h: 5000/5000 (100.0%)
+[Binance] RUNEUSDT 4h DONE. Total: 5000 candles.
+[binance] Saved RUNEUSDT 4h → data\binance\RUNEUSDT\4h.json, data\binance\RUNEUSDT\4h.csv
+
+[Bybit] Downloading RUNEUSDT 4h ...
+[Bybit] RUNEUSDT 4h: 1000/5000 (20.0%)
+[Bybit] RUNEUSDT 4h: 2000/5000 (40.0%)
+[Bybit] RUNEUSDT 4h: 3000/5000 (60.0%)
+[Bybit] RUNEUSDT 4h: 4000/5000 (80.0%)
+[Bybit] RUNEUSDT 4h: 5000/5000 (100.0%)
+[Bybit] RUNEUSDT 4h DONE. Total: 5000 candles.
+[bybit] Saved RUNEUSDT 4h → data\bybit\RUNEUSDT\4h.json, data\bybit\RUNEUSDT\4h.csv
+
+All done.
+
+C:\Users\Win10_Game_OS\Desktop\Bot>
