@@ -1,128 +1,136 @@
-import asyncio
-import aiohttp
+# ============================================================
+# V12.2 REAL R BACKTEST — DEBUG VERSION
+# ============================================================
 
-from data_layer import fetch_klines
+import json
+import asyncio
 from reversal_detector import ReversalDetector
 
 
-SYMBOL = "BTCUSDT"
-TIMEFRAME = "15"
-LIMIT = 1000
+LOOKAHEAD = 35
+START_BALANCE = 10000
+RISK_PER_TRADE = 0.01
 
 
-async def load_data():
-    async with aiohttp.ClientSession() as session:
-        klines = await fetch_klines(
-            session=session,
-            symbol=SYMBOL,
-            interval=TIMEFRAME,
-            limit=LIMIT
-        )
+# ============================================================
+# REAL R SIMULATION
+# ============================================================
 
-    if not klines:
-        print("❌ No klines received from API")
-        return [], [], [], []
+def simulate_trade(signal, future_candles):
 
-    klines = list(reversed(klines))
+    entry = signal["entry"]
+    sl = signal["stop"]
+    tp = signal["take_profit"]
+    side = signal["side"]
 
-    closes = [float(k[4]) for k in klines]
-    highs = [float(k[2]) for k in klines]
-    lows = [float(k[3]) for k in klines]
-    volumes = [float(k[5]) for k in klines]
+    risk = abs(entry - sl)
+    if risk == 0:
+        return 0.0
 
-    return closes, highs, lows, volumes
+    for candle in future_candles:
 
+        high = float(candle["high"])
+        low = float(candle["low"])
 
-def simulate_trade(direction, entry_price, future_closes):
-    tp_pct = 0.01
-    sl_pct = 0.01
+        if side == "long":
 
-    if direction == "bullish":
-        tp = entry_price * (1 + tp_pct)
-        sl = entry_price * (1 - sl_pct)
+            if low <= sl:
+                return -1.0
 
-        for price in future_closes:
-            if price >= tp:
-                return 1
-            if price <= sl:
-                return -1
+            if high >= tp:
+                reward = abs(tp - entry)
+                return reward / risk
 
-    if direction == "bearish":
-        tp = entry_price * (1 - tp_pct)
-        sl = entry_price * (1 + sl_pct)
+        else:
 
-        for price in future_closes:
-            if price <= tp:
-                return 1
-            if price >= sl:
-                return -1
+            if high >= sl:
+                return -1.0
 
-    return 0
+            if low <= tp:
+                reward = abs(entry - tp)
+                return reward / risk
+
+    return 0.0
 
 
-async def main():
-    closes, highs, lows, volumes = await load_data()
+# ============================================================
+# BACKTEST
+# ============================================================
 
-    print("Loaded candles:", len(closes))
-
-    if len(closes) < 200:
-        print("❌ Not enough data")
-        return
+async def run_backtest(candles):
 
     detector = ReversalDetector()
 
-    total = 0
+    balance = START_BALANCE
+    peak_balance = START_BALANCE
+
+    total_trades = 0
     wins = 0
     losses = 0
-    neutral = 0
+    no_hits = 0
 
-    for i in range(120, len(closes) - 35):
+    print("Starting backtest...")
+    print(f"Total candles: {len(candles)}")
 
-        result = detector.analyze_reversal(
-            closes[:i],
-            highs[:i],
-            lows[:i],
-            volumes[:i],
-            min_score=0
-        )
+    for i in range(100, len(candles) - LOOKAHEAD):
 
-        direction = result.get("reversal")
+        ltf = candles[:i]
+        tf15 = candles[:i]
+        tf1h = candles[:i]
+        tf4h = candles[:i]
 
-        if direction:
-            total += 1
+        signal = detector.detect(ltf, tf15, tf1h, tf4h)
 
-            entry = closes[i]
-            future = closes[i + 1:i + 35]
+        if not signal:
+            continue
 
-            outcome = simulate_trade(direction, entry, future)
+        future = candles[i:i + LOOKAHEAD]
 
-            if outcome == 1:
-                wins += 1
-            elif outcome == -1:
-                losses += 1
-            else:
-                neutral += 1
+        result_R = simulate_trade(signal, future)
 
-    print("\n========== BACKTEST RESULT ==========")
-    print("Symbol:", SYMBOL)
-    print("Total signals:", total)
-    print("Wins:", wins)
-    print("Losses:", losses)
-    print("No hit (35 candles):", neutral)
+        risk_amount = balance * RISK_PER_TRADE
+        pnl = risk_amount * result_R
 
-    if total > 0:
-        overall_wr = round(wins / total * 100, 2)
-        print("Overall Winrate:", overall_wr, "%")
+        balance += pnl
+        total_trades += 1
 
-    closed_trades = wins + losses
+        if result_R > 0:
+            wins += 1
+        elif result_R < 0:
+            losses += 1
+        else:
+            no_hits += 1
 
-    if closed_trades > 0:
-        closed_wr = round(wins / closed_trades * 100, 2)
-        print("Closed Trades Winrate:", closed_wr, "%")
+        if balance > peak_balance:
+            peak_balance = balance
 
-        expectancy = ((wins * 0.01) - (losses * 0.01)) / closed_trades
-        print("Expectancy per trade:", round(expectancy, 5))
+    print("\n==============================")
+    print("REAL R BACKTEST")
+    print("==============================")
+    print(f"Total trades: {total_trades}")
+    print(f"Wins: {wins}")
+    print(f"Losses: {losses}")
+    print(f"No hit: {no_hits}")
 
+    if total_trades > 0:
+        print(f"Winrate: {wins / total_trades * 100:.2f}%")
+
+    print(f"Final balance: {balance:.2f}")
+
+
+# ============================================================
+# MAIN
+# ============================================================
 
 if __name__ == "__main__":
-    asyncio.run(main())
+
+    print("Loading candles...")
+
+    try:
+        with open("data.json", "r") as f:
+            candles = json.load(f)
+    except Exception as e:
+        print("ERROR loading data.json:", e)
+        exit()
+
+    asyncio.run(run_backtest(candles))
