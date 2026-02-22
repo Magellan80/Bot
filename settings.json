@@ -1,7 +1,7 @@
 {
-    "mode": "A",
+    "mode": "B",
     "min_score": 55,
-    "strictness_level": "soft",
+    "strictness_level": "medium",
     "reversal_requires_state": false,
     "reversal_state_ttl_sec": 3600,
     "reversal_min_score_bonus": 5,

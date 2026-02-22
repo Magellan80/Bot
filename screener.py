@@ -146,9 +146,7 @@ def log_signal(s: dict):
         )
 
 
-# v2.0: НОВАЯ ФУНКЦИЯ для диагностики
 def log_blocked_signal(symbol: str, reason: str, details: str = ""):
-    """Логирование блокированных сигналов для диагностики"""
     with open("blocked_signals.log", "a", encoding="utf-8") as f:
         timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
         f.write(f"{timestamp} | {symbol} | Blocked by: {reason}")
@@ -254,23 +252,13 @@ def generate_candle_chart(klines, symbol: str, timeframe_label: str = "15m"):
 
 
 def compute_htf_trend_from_klines(klines):
-    """
-    Bybit returns klines newest → oldest.
-    Index 0 = latest closed candle.
-
-    We compute trend as % change between:
-    latest close (0)
-    and N candles back (30 or last available).
-    """
-
     if not klines or len(klines) < 20:
         return 0
 
     try:
-        # ❗ НЕ переворачиваем массив
         closes = [float(c[4]) for c in klines]
 
-        latest = closes[0]  # newest
+        latest = closes[0]
         lookback_index = 30 if len(closes) > 30 else len(closes) - 1
         past = closes[lookback_index]
 
@@ -551,7 +539,7 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
 
         total_vol = bid_vol + ask_vol
 
-        max_spread_pct = 1.0  # v2.0: было 0.5
+        max_spread_pct = 1.0
         if last_price > 100:
             min_total_vol = 150.0
         elif last_price > 10:
@@ -574,6 +562,7 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
     except Exception as e:
         log_error(e)
         return False, {}
+
 
 def compute_impulse_score(closes, volumes):
     try:
@@ -654,15 +643,8 @@ def amplify_confidence(
     trend_4h: float,
     direction_side: str | None,
 ) -> float:
-    """
-    Confidence Amplifier V10.3
-    Усиливает или ослабляет confidence
-    без изменения rating.
-    """
-
     conf = base_conf
 
-    # 1️⃣ Distance from threshold    
     distance = rating - adaptive_min_score
 
     if distance > 12:
@@ -672,14 +654,11 @@ def amplify_confidence(
     elif distance < 0:
         conf *= 0.92
 
-
-    # 2️⃣ BTC regime stability
     if btc_factor > 1.08:
         conf *= 1.06
     elif btc_factor < 0.92:
         conf *= 0.94
 
-    # 3️⃣ HTF alignment
     if direction_side == "bullish":
         if trend_1h > 0 and trend_4h > 0:
             conf *= 1.06
@@ -692,22 +671,16 @@ def amplify_confidence(
         elif trend_1h > 0 and trend_4h > 0:
             conf *= 0.94
 
-    # 4️⃣ Rating tier bonus
     if rating >= 85:
         conf *= 1.03
     elif rating < adaptive_min_score + 3:
         conf *= 0.95
-
-    # =====================================
-    # REALISTIC CONFIDENCE CLAMP
-    # =====================================
 
     max_cap = 0.88
     min_cap = 0.40
 
     conf = max(min_cap, min(conf, max_cap))
 
-    # если рейтинг слабый — режем
     if rating < adaptive_min_score + 5:
         conf *= 0.85
 
@@ -771,13 +744,11 @@ def _passes_strict_reversal_filters(
     event_ok = False
 
     if direction == "Dump → Pump":
-        # v2.0: flow фильтры только в strict режиме
         if strictness_level == "strict" and (flow_status == "aggressive_sellers" or delta_status == "bearish"):
             return False
         structure_ok = structure_1h == "bullish" or structure_4h == "bullish"
         event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
     else:
-        # v2.0: flow фильтры только в strict режиме
         if strictness_level == "strict" and (flow_status == "aggressive_buyers" or delta_status == "bullish"):
             return False
         structure_ok = structure_1h == "bearish" or structure_4h == "bearish"
@@ -807,7 +778,6 @@ async def compute_btc_stability(session):
             _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
             return _BTC_CTX_CACHE
 
-        # ❗ НЕ переворачиваем массив
         closes = [float(c[4]) for c in kl]
 
         latest = closes[0]
@@ -820,7 +790,6 @@ async def compute_btc_stability(session):
 
         change_pct = (latest - past) / past * 100
 
-        # средняя внутриминутная волатильность
         diffs = []
         for i in range(0, lookback_index):
             prev = closes[i + 1]
@@ -857,6 +826,7 @@ async def compute_btc_stability(session):
         log_error(e)
         _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
         return _BTC_CTX_CACHE
+
 
 async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
 
@@ -898,12 +868,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     # ------------------------
     klines_1m = await fetch_klines(session, symbol, interval="1", limit=80)
 
-    # 🔵 FETCH 15M DATA FOR CHART
     klines_15m = await fetch_klines(session, symbol, interval="15", limit=80)
 
     if not klines_15m or len(klines_15m) < 40:
         return None
-
 
     if not klines_1m:
         print(f"[CUT] {symbol} NO KLINES")
@@ -920,7 +888,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     latest_close = closes_1m[0]
     last_price = latest_close
-
 
     # =====================================================
     # PHASE 1 — LIGHT PRECHECK (EARLY FILTER)
@@ -946,7 +913,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     if light_rev:
         light_rating = light_rev.get("rating", 0)
 
-    # 🔒 Early rejection (если слабый сигнал — дальше не идём)
     if light_rating < 55:
         return None
 
@@ -960,9 +926,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     ob_ok, ob_meta = evaluate_orderbook_quality(orderbook, last_price)
     if not ob_ok:
-        # v2.0: Логируем почему заблокировано
-        log_blocked_signal(symbol, "orderbook_quality", 
-                          f"spread={ob_meta.get('spread_pct', 0):.2f}%, vol={ob_meta.get('total_vol_10', 0):.0f}")
+        log_blocked_signal(symbol, "orderbook_quality",
+                           f"spread={ob_meta.get('spread_pct', 0):.2f}%, vol={ob_meta.get('total_vol_10', 0):.0f}")
         return None
 
     oi_now, oi_prev = await fetch_open_interest(session, symbol)
@@ -1000,7 +965,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     USE_HTF_THRESHOLD = 60
 
     if light_rating < USE_HTF_THRESHOLD:
-        # ⚡ Skip HTF loading (экономим 3 REST запроса)
         trend_15m = trend_1h = trend_4h = 0
         structure_15m = structure_1h = structure_4h = "ranging"
         event_15m = event_1h = event_4h = None
@@ -1015,7 +979,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         htf_liq_4h = {}
 
     else:
-        # 🧠 Загружаем HTF только для сильных сигналов
         htf = await compute_htf_context(session, symbol)
 
         trend_15m = htf["trend_15m"]
@@ -1048,7 +1011,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         htf_liq_1h = htf.get("htf_liquidity_1h", {}) or {}
         htf_liq_4h = htf.get("htf_liquidity_4h", {}) or {}
 
-
     risk_score = compute_risk_score(
         closes_1m,
         oi_status,
@@ -1059,11 +1021,9 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         trend_score,
     )
 
-
     habr = detector.analyze_habr(closes_1m, highs_1m, lows_1m, volumes_1m)
 
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
-
 
     # =====================================================
     # BTC CONTEXT
@@ -1074,9 +1034,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     btc_regime = btc_ctx.get("regime", "neutral")
     btc_factor = btc_ctx.get("factor", 1.0)
 
-    # 🔒 HARD CLAMP (critical stabilization)
     btc_factor = max(0.85, min(btc_factor, 1.15))
-
 
     # =====================================================
     # REVERSAL STATE
@@ -1084,12 +1042,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
 
-
     # =====================================================
     # ASSET PROFILE ENGINE
     # =====================================================
 
-    
     asset_profile = asset_engine.analyze(
         closes_1m,
         highs_1m,
@@ -1097,7 +1053,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     )
 
     asset_class = asset_profile.get("asset_class", "mid")
-
 
     # =====================================================
     # STRATEGY SELECTION
@@ -1110,12 +1065,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         asset_class
     )
 
-    # 🔥 Adaptive threshold (stable formula)
     adaptive_min_score = int(
         (base_min_score + mode_profile["min_score_shift"]) * (2 - btc_factor)
     )
 
-    # 🔒 Safety clamp for threshold
     adaptive_min_score = max(54, min(adaptive_min_score, 74))
 
     print(
@@ -1124,7 +1077,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         f"btc_factor={btc_factor:.3f} "
         f"adaptive={adaptive_min_score}"
     )
-
 
     # =====================================================
     # DETECTION PHASE (NO INTERNAL FILTER)
@@ -1147,12 +1099,11 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             event_4h=event_4h,
             market_regime=btc_regime,
             asset_class=asset_class,
-            min_score=0,  # ❗ disabled internal filter
+            min_score=0,
         )
 
         if result:
             rev = result
-
 
     elif strategy == "continuation":
 
@@ -1174,12 +1125,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
                 "rating": cont.get("rating", 0),
             }
 
-
-    # -----------------------------------------------------
-    # SAFETY DEFAULTS (prevents UnboundLocalError)
-    # -----------------------------------------------------
     filters_ok_ratio = locals().get("filters_ok_ratio", 0.0)
-
 
     # =====================================================
     # ADAPTIVE SCORING ENGINE V10.2
@@ -1190,12 +1136,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     if DEBUG_ROUTER:
         print("Raw rating BEFORE weighting:", raw_rating)
 
-    # 🎯 Base smoothing (уменьшаем резкие скачки)
     weighted_rating = raw_rating * 0.85 + 15
 
     if rev.get("reversal"):
 
-        # 1️⃣ Regime multiplier
         if btc_regime == "trending":
             weighted_rating *= 1.07
         elif btc_regime == "ranging":
@@ -1203,13 +1147,11 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         elif btc_regime == "high_vol":
             weighted_rating *= 0.95
 
-        # 2️⃣ State reinforcement
         if reversal_state:
             state_type = reversal_state.get("type")
             if strategy == "reversal" and state_type in ("pump", "dump"):
                 weighted_rating *= 1.07
 
-        # 3️⃣ Volatility normalization
         if len(highs_1m) >= 20:
             recent_range = max(highs_1m[:20]) - min(lows_1m[:20])
             avg_price = sum(closes_1m[:20]) / 20
@@ -1221,7 +1163,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             elif volatility_pct > 1.3:
                 weighted_rating *= 1.03
 
-        # 4️⃣ Liquidity proximity
         direction = rev.get("reversal")
 
         if direction in ("Dump → Pump", "bullish") and liq_bias == "below":
@@ -1230,57 +1171,30 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         if direction in ("Pump → Dump", "bearish") and liq_bias == "above":
             weighted_rating *= 1.04
 
-        # 5️⃣ Asset confidence bonus
         if asset_class == "major":
             weighted_rating *= 1.03
 
-
-        # ---------------------------------------------------
-        # FIX: do not over-suppress reversal in ranging
-        # ---------------------------------------------------
         if btc_regime == "ranging" and strategy == "reversal":
             weighted_rating *= 1.05
 
-
-        # ================================
-        # SmartFilters modulation (quality damping)
-        # ================================
-        # Если filters слабые — уменьшаем общий рейтинг
         quality_multiplier = 0.85 + (filters_ok_ratio * 0.3)
         weighted_rating *= quality_multiplier
 
-
-    # FINAL CLAMP (всегда выполняется)
-    # 🔒 Финальный демпфер
     weighted_rating = int(
         max(0, min(weighted_rating * 0.95 + raw_rating * 0.05, 100))
     )
 
     print(f"[RAW PASS] {symbol} weighted={weighted_rating} min={adaptive_min_score}")
 
-    # ✅ SINGLE FINAL THRESHOLD CHECK
     if weighted_rating >= adaptive_min_score:
         rev["rating"] = weighted_rating
     else:
         print(f"[CUT] {symbol} BELOW THRESHOLD weighted={weighted_rating} < {adaptive_min_score}")
         rev = {"reversal": None, "rating": weighted_rating}
 
-
-    # ================================
-    # DEBUG RAW PASS
-    # ================================
-
     if rev.get("reversal"):
         print(f"[DEBUG PASS RAW] {symbol} rating={weighted_rating} "
-            f"adaptive_min={adaptive_min_score}")
-
-
-    # =====================================================
-    # END V10.2 ROUTER
-    # =====================================================
-    # =====================================================
-    # DEBUG V10.2 ROUTER
-    # =====================================================
+              f"adaptive_min={adaptive_min_score}")
 
     if DEBUG_ROUTER:
         print("\n========== ROUTER DEBUG ==========")
@@ -1302,7 +1216,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         print("==================================\n")
 
-    
     # =====================================================
     # FINAL SIGNAL BUILDING
     # =====================================================
@@ -1337,13 +1250,11 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             "trend_1h": trend_1h,
             "trend_4h": trend_4h,
             "meta_klines_15m": klines_15m,
-
         })
 
     if not candidates:
         print(f"[CUT] {symbol} NO CANDIDATES AFTER ROUTER")
         return None
-
 
     # =====================================================
     # SMART FILTERS V3
@@ -1371,17 +1282,9 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             global_risk_proxy=None,
         )
 
-        # ================================
-        # APPLY SMART FILTER RATING
-        # ================================
-
         c["rating"] = sf3["final_rating"]
 
         direction_side = infer_direction_side(c["type"])
-
-        # ================================
-        # ALIGNMENT PENALTIES
-        # ================================
 
         aligned = apply_alignment_penalties(
             rating=c["rating"],
@@ -1417,10 +1320,12 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         # DEBUG SMART FILTERS
         # ================================
 
-        alignment_score = sf3.get("alignment_score", 0)
-        filters_ok_ratio = sf3.get("filters_ok_ratio", 0)
+        conf_meta = sf3.get("confidence_meta", {}) or {}
 
-        print(f"[FILTER CHECK] {symbol} filters={filters_ok_ratio}")
+        filters_ok_ratio = conf_meta.get("filters_ok_ratio", 0.0)
+        alignment_score = conf_meta.get("trend_consistency_bonus", 0.0)
+
+        print(f"[FILTER CHECK] {symbol} filters={filters_ok_ratio:.2f}")
 
         print(
             f"[DEBUG] {symbol} | "
@@ -1436,7 +1341,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         c["symbol_regime"] = sf3["symbol_regime"]
         c["market_ctx"] = sf3["market_ctx"]
-    
+
     # ================================
     # FINALIZE BEST SIGNAL
     # ================================
@@ -1463,6 +1368,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     return best
 
+
 async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
 
     async with aiohttp.ClientSession() as session:
@@ -1474,7 +1380,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
             try:
                 tickers = await fetch_tickers(session)
 
-                # 🔥 сортировка по объёму
                 tickers = sorted(
                     tickers,
                     key=lambda x: float(x.get("turnover24h", 0)),
@@ -1486,20 +1391,12 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     if t.get("symbol", "").endswith("USDT")
                 ]
 
-                # ==========================================
-                # DYNAMIC SCAN DEPTH
-                # ==========================================
-
                 if min_score >= 70:
                     scan_limit = 40
                 elif min_score >= 60:
                     scan_limit = 70
                 else:
                     scan_limit = 100
-
-                # ==========================================
-                # LIGHT PRE-FILTER
-                # ==========================================
 
                 filtered = []
 
@@ -1526,10 +1423,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
 
                 print(f"Scan depth: {scan_limit} symbols")
                 print(f"Scanning {len(symbols)} symbols")
-
-                # ==========================================
-                # SEMAPHORE (RATE LIMIT STABILITY)
-                # ==========================================
 
                 semaphore = asyncio.Semaphore(10)
 
@@ -1561,18 +1454,15 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     if isinstance(r, Exception):
                         print("Symbol error:", repr(r))
 
-                # 🔒 Remove None and exceptions
                 results = [
                     r for r in results
                     if isinstance(r, dict) and r.get("type")
                 ]
 
-
                 # ==========================================
                 # QUALITY FILTER
                 # ==========================================
 
-                # 🔥 Dynamic confidence threshold
                 if min_score >= 70:
                     MIN_SIGNAL_CONFIDENCE = 0.60
                 elif min_score >= 60:
@@ -1590,7 +1480,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                 print(f"Signal limit: {SIGNALS_PER_ITERATION_LIMIT}")
                 print(f"Min confidence required: {MIN_SIGNAL_CONFIDENCE}")
 
-                # 🔎 DEBUG CONF
                 for r in results:
                     if isinstance(r, dict) and r.get("type"):
                         print(
@@ -1618,10 +1507,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     print(f"Signals found: {len(signals)}")
 
                     for s in signals:
-
-                        # ==================================
-                        # STEP 4 — CHECK 15m KLINES (FIX)
-                        # ==================================
 
                         if not s.get("meta_klines_15m"):
                             print(f"[CHART CUT] {s['symbol']} no 15m klines")

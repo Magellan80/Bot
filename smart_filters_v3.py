@@ -1,10 +1,10 @@
 # smart_filters_v3.py
 """
-SmartFilters v3.7 LITE
+SmartFilters v3.8 ELITE
 (HTF-Structure + HTF-Momentum Divergence + HTF-Volume Profile + HTF-trend
  + Trend Consistency + Structure–Trend Alignment + Trend–Momentum Fusion)
 
-Базируется на SmartFilters v3.6 FULL:
+Базируется на SmartFilters v3.7 LITE:
 - Symbol Regime Detection (HTF-aware + HTF-structure)
 - Volatility Clustering
 - Market-Wide Context
@@ -13,11 +13,10 @@ SmartFilters v3.7 LITE
 - Confidence Engine
 - apply_smartfilters_v3(...)
 
-Добавлено/усилено в v3.7 LITE:
-- Trend Consistency (15m/1h/4h согласованность)
-- Structure–Trend Alignment (HTF-structure + HTF-trend согласованность)
-- Trend–Momentum Fusion (HTF-trend + HTF-momentum согласованность)
-- мягкое влияние этих факторов на confidence (без агрессивного скейлинга)
+Усилено в v3.8 ELITE:
+- Более корректное использование окон (последние N баров, а не первые)
+- Чуть более стабильная оценка ATR/STD (по свежей истории)
+- Аккуратные микрофиксы без изменения внешнего API
 """
 
 from __future__ import annotations
@@ -42,9 +41,14 @@ def _safe_pct_change(a: float, b: float) -> float:
 
 
 def _rolling_std(values: List[float], window: int) -> float:
+    """
+    Стандартное отклонение по последним window значениям.
+    Ожидается порядок: newest → oldest или oldest → newest — не критично,
+    важно, что берём именно последние N значений.
+    """
     if len(values) < window:
         return 0.0
-    chunk = values[:window]
+    chunk = values[-window:]
     if len(chunk) < 2:
         return 0.0
     return statistics.pstdev(chunk)
@@ -54,16 +58,21 @@ def _rolling_atr_from_ohlc(klines: List[List[Any]], window: int = 14) -> float:
     """
     Простейший ATR по последним N барам.
     klines: [[ts, open, high, low, close, volume, ...], ...]
+    Ожидается порядок: oldest → newest.
+    Если порядок другой — важно, что мы берём последние window+1 баров.
     """
     if not klines or len(klines) < window + 1:
         return 0.0
 
+    # Берём последние window+1 баров, чтобы корректно считать TR
+    recent = klines[-(window + 1):]
+
     trs = []
-    for i in range(window):
-        o = float(klines[i][1])
-        h = float(klines[i][2])
-        l = float(klines[i][3])
-        c_prev = float(klines[i + 1][4])
+    for i in range(1, len(recent)):
+        o = float(recent[i][1])
+        h = float(recent[i][2])
+        l = float(recent[i][3])
+        c_prev = float(recent[i - 1][4])
 
         tr = max(
             h - l,
@@ -86,8 +95,8 @@ def _compute_htf_trend_score(
     Агрегированный HTF-тренд: взвешенное среднее по 15m/1h/4h.
     Используется как мягкий, но устойчивый контекст.
     """
-    parts = []
-    weights = []
+    parts: List[float] = []
+    weights: List[float] = []
 
     if trend_15m is not None:
         parts.append(trend_15m)
@@ -114,8 +123,10 @@ def _compute_htf_trend_score(
 def _compute_rsi(values: List[float], period: int = 14) -> List[float]:
     if len(values) <= period:
         return [50.0] * len(values)
-    gains = []
-    losses = []
+
+    gains: List[float] = []
+    losses: List[float] = []
+
     for i in range(1, period + 1):
         diff = values[i - 1] - values[i]
         if diff > 0:
@@ -124,6 +135,7 @@ def _compute_rsi(values: List[float], period: int = 14) -> List[float]:
         else:
             gains.append(0.0)
             losses.append(-diff)
+
     avg_gain = sum(gains) / period
     avg_loss = sum(losses) / period if sum(losses) > 0 else 0.0
 
@@ -238,10 +250,12 @@ def _build_volume_profile(
     - делим диапазон цен на buckets
     - суммируем объём по каждому бакету
     - находим HVN/LVN и value area
+    Ожидается порядок: oldest → newest.
     """
     if not klines or len(klines) < 10:
         return None
 
+    # Берём всю доступную историю (она уже ограничена внешним кодом)
     closes = [float(c[4]) for c in klines]
     highs = [float(c[2]) for c in klines]
     lows = [float(c[3]) for c in klines]
@@ -301,7 +315,8 @@ def _build_volume_profile(
         va_low = price_min
         va_high = price_max
 
-    last_price = closes[0]
+    # Последняя цена — по последнему close
+    last_price = closes[-1]
     if last_price > hvn_price:
         vol_bias = "above_hvn"
     elif last_price < hvn_price:
@@ -400,7 +415,7 @@ class SymbolMemory:
 
 
 # ==========================
-# 3. Класс SmartFilters v3.7 LITE
+# 3. Класс SmartFilters v3.8 ELITE
 # ==========================
 
 class SmartFilters:
@@ -426,7 +441,7 @@ class SmartFilters:
 
     def _decay_memory(self, symbol: str):
         mem = self._symbol_memory[symbol]
-        signals = mem["signals"]
+        signals: deque = mem["signals"]
         if not signals:
             return
 
@@ -486,7 +501,10 @@ class SmartFilters:
             }
 
         closes = closes[:]  # копия
+
         atr = _rolling_atr_from_ohlc(klines_1m, window=14)
+
+        # Предполагаем, что closes[0] — последний бар (как в исходной версии)
         last_price = closes[0]
         atr_pct = _safe_pct_change(last_price + atr, last_price)
 
@@ -607,6 +625,8 @@ class SmartFilters:
             }
 
         atr = _rolling_atr_from_ohlc(klines_1m, window=14)
+
+        # Предполагаем, что closes[0] — последний бар (как в исходной версии)
         last_price = closes[0]
         atr_pct = _safe_pct_change(last_price + atr, last_price)
 
@@ -683,7 +703,7 @@ class SmartFilters:
         else:
             risk = 0.5
 
-        trend_scores = []
+        trend_scores: List[float] = []
         if btc_trend_score is not None:
             trend_scores.append(btc_trend_score)
         if eth_trend_score is not None:
@@ -895,7 +915,7 @@ class SmartFilters:
                 },
             }
         total = len(filters_ok)
-        good = sum(1 for v in filters_ok.values() if v)        
+        good = sum(1 for v in filters_ok.values() if v)
 
         raw_ratio = good / total if total > 0 else 0.0
 
@@ -906,7 +926,6 @@ class SmartFilters:
             filters_ok_ratio = raw_ratio * 0.9
 
         regime_strength = symbol_regime.get("strength", 0.5)
-
         regime_strength = max(0.0, min(1.0, regime_strength))
 
         regime = symbol_regime.get("regime", "range")
@@ -1202,7 +1221,7 @@ class SmartFilters:
         }
 
     # ==========================
-    # 10. Финальная обёртка v3.7 LITE (метод)
+    # 10. Финальная обёртка v3.8 ELITE (метод)
     # ==========================
 
     def apply_smartfilters_v3(
@@ -1226,7 +1245,8 @@ class SmartFilters:
         htf_structure_ctx = compute_htf_structure(klines_1m)
 
         # 0.1) HTF-momentum divergence
-        closes_for_mom = [float(c[4]) for c in klines_1m][::-1]
+        # Для дивергенции ожидаем closes в порядке oldest → newest
+        closes_for_mom = [float(c[4]) for c in klines_1m]
         htf_momentum_ctx = _detect_htf_momentum_divergence(closes_for_mom)
 
         # 0.2) Volume profile
@@ -1321,7 +1341,6 @@ class SmartFilters:
             else:
                 final_rating *= 0.95
 
-
         final_rating_int = int(round(final_rating))
 
         self.update_symbol_memory(
@@ -1377,8 +1396,8 @@ def apply_smartfilters_v3(
     global_risk_proxy: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
-    Совместимый с v3.0–v3.6 API.
-    Внутри используется SmartFilters v3.7 LITE.
+    Совместимый с v3.0–v3.7 API.
+    Внутри используется SmartFilters v3.8 ELITE.
     """
     return _GLOBAL_FILTERS.apply_smartfilters_v3(
         symbol=symbol,

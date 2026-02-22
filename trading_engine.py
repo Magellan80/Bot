@@ -3,6 +3,8 @@ import csv
 from enum import Enum
 from typing import Dict, Optional, Any, List, Tuple
 
+from allocator_engine import AllocatorEngine
+
 import asyncio
 
 from config import get_current_mode, load_settings, save_settings
@@ -111,9 +113,10 @@ class TradingEngine:
     TIME_TIGHTEN_R = 0.3
 
     # 4.5: базовые параметры риск‑менеджмента на сделку
-    BASE_RISK_PCT = 0.01          # 1% от equity на сделку до модификаторов
-    MIN_CONFIDENCE_HARD = 0.55    # ниже — не торгуем
-    MID_CONFIDENCE = 0.75         # между MIN и MID — урезаем размер
+    # чуть более консервативно ради стабильности
+    BASE_RISK_PCT = 0.008         # 0.8% от equity на сделку до модификаторов
+    MIN_CONFIDENCE_HARD = 0.60    # ниже — не торгуем
+    MID_CONFIDENCE = 0.80         # между MIN и MID — урезаем размер
 
     def __init__(self, broker):
         self.broker = broker
@@ -121,10 +124,12 @@ class TradingEngine:
         # лимит одновременных позиций
         self.max_positions = 2
 
-        # лимит общей экспозиции (notional), например не более 5× equity
-        self.max_exposure_mult = 5.0
+        # лимит общей экспозиции (notional), например не более 3× equity
+        # (было 5.0 — чуть снижаем плечо ради более ровной кривой)
+        self.max_exposure_mult = 3.0
 
-        self.daily_loss_limit_pct = 5.0
+        # дневной лимит просадки (чуть жёстче)
+        self.daily_loss_limit_pct = 4.0
         self.daily_start_equity: Optional[float] = None
         self.daily_loss_hit = False
         self.daily_reset_date: Optional[str] = None  # YYYY-MM-DD
@@ -153,6 +158,9 @@ class TradingEngine:
 
         # счётчик внутренних ошибок логики (не REST)
         self.internal_error_count: int = 0
+
+        # Institutional allocator
+        self.allocator = AllocatorEngine()
 
     # ---------------------------------------------------------
     # SETTINGS: baseline
@@ -352,18 +360,25 @@ class TradingEngine:
     # РАСЧЁТ РАЗМЕРА ПОЗИЦИИ (4.5: адаптивный)
     # ---------------------------------------------------------
 
-    async def compute_position_size(self, stop_distance: float, s: Optional[Dict[str, Any]] = None) -> float:
+    async def compute_position_size(
+        self,
+        stop_distance: float,
+        s: Optional[Dict[str, Any]] = None,
+        custom_risk_pct: Optional[float] = None
+    ) -> float:
         """
         Адаптивный расчёт размера позиции:
-        - базовый риск BASE_RISK_PCT от equity
+        - риск задаётся allocator'ом (custom_risk_pct)
+        - если allocator не передал риск → BASE_RISK_PCT
         - модификация по market_risk
-        - модификация по confidence
-        - модификация по symbol_regime_strength
-        - модификация по волатильности (atr_regime / vol_cluster)
+        - confidence
+        - symbol_regime_strength
+        - волатильность (atr_regime / vol_cluster)
         """
+
         try:
             equity = await self.broker.get_equity()
-        except Exception as e:
+        except Exception:
             self._register_rest_error("compute_position_size:get_equity")
             return 0.0
 
@@ -372,37 +387,53 @@ class TradingEngine:
 
         s = s or {}
 
-        # --- market_risk (0..1, по умолчанию 0) ---
+        # =====================================================
+        # РИСК (из allocator или базовый)
+        # =====================================================
+
+        risk_pct = custom_risk_pct if custom_risk_pct is not None else self.BASE_RISK_PCT
+
+        # =====================================================
+        # market_risk (0..1)
+        # =====================================================
+
         market_risk = float(s.get("market_risk", 0.0) or 0.0)
         market_risk = max(0.0, min(market_risk, 1.0))
 
-        # базовый риск на сделку
-        risk_pct = self.BASE_RISK_PCT
-
-        # при высоком market_risk уменьшаем риск
-        # при market_risk = 1.0 → риск в 2 раза меньше
+        # при market_risk = 1.0 → риск уменьшается на 50%
         risk_pct *= (1.0 - 0.5 * market_risk)
 
-        # --- confidence (0..1, по умолчанию 1.0) ---
+        # =====================================================
+        # confidence (0..1)
+        # =====================================================
+
         confidence = float(s.get("confidence", 1.0) or 1.0)
         confidence = max(0.0, min(confidence, 1.0))
 
-        # --- symbol_regime_strength (0.3..1.5, по умолчанию 1.0) ---
+        # =====================================================
+        # symbol_regime_strength (0.3..1.5)
+        # =====================================================
+
         symbol_regime_strength = s.get("symbol_regime_strength")
         if symbol_regime_strength is None:
             symbol_regime_strength = s.get("symbol_regime_score", 1.0)
+
         try:
             symbol_regime_strength = float(symbol_regime_strength)
         except (TypeError, ValueError):
             symbol_regime_strength = 1.0
+
         symbol_regime_strength = max(0.3, min(symbol_regime_strength, 1.5))
 
-        # --- волатильность (atr_regime / vol_cluster) ---
+        # =====================================================
+        # волатильность
+        # =====================================================
+
         vol_factor = 1.0
+
         atr_regime = s.get("atr_regime")
         vol_cluster = s.get("vol_cluster")
 
-        # если есть vol_cluster — при high_vol уменьшаем размер
         if isinstance(vol_cluster, str):
             vc = vol_cluster.lower()
             if "high" in vc:
@@ -410,7 +441,6 @@ class TradingEngine:
             elif "low" in vc:
                 vol_factor *= 1.1
 
-        # если есть atr_regime — лёгкая корректировка
         if isinstance(atr_regime, str):
             ar = atr_regime.lower()
             if ar == "high":
@@ -418,12 +448,18 @@ class TradingEngine:
             elif ar == "low":
                 vol_factor *= 1.05
 
-        # --- базовый размер по риску ---
+        # =====================================================
+        # РАСЧЕТ
+        # =====================================================
+
         risk_amount = equity * risk_pct
         size = risk_amount / stop_distance
 
-        # --- модификации ---
-        size *= confidence
+        # ВАЖНО: confidence уже учтён в allocator'е, поэтому
+        # дополнительно усиливаем его только если allocator не использовался
+        if custom_risk_pct is None:
+            size *= confidence
+
         size *= symbol_regime_strength
         size *= vol_factor
 
@@ -918,9 +954,6 @@ class TradingEngine:
                 print(f"[ENGINE] Skip open — position already exists: {symbol}")
                 return
 
-        # временно блокируем символ
-        self.positions[symbol] = {"state": "opening"}
-
         try:
             signal_type = s["type"]
             price = s["price"]
@@ -947,13 +980,55 @@ class TradingEngine:
 
             stop_distance = atr * atr_mult
 
-            # --- адаптивный размер позиции ---
-            size = await self.compute_position_size(stop_distance, s)
-            if size <= 0:
-                raise ValueError("Invalid position size")
+            # =====================================================
+            # INSTITUTIONAL ALLOCATOR ENGINE (ДО BLOCK STATE)
+            # =====================================================
 
             confidence = float(s.get("confidence", 1.0) or 1.0)
             confidence = max(0.0, min(confidence, 1.0))
+
+            try:
+                equity = await self.broker.get_equity()
+            except Exception:
+                self._register_rest_error("open_position:get_equity")
+                return
+
+            if not equity or equity <= 0:
+                return
+
+            risk_pct = self.allocator.evaluate_trade(
+                equity=equity,
+                open_positions=self.positions,
+                confidence=confidence
+            )
+
+            if risk_pct is None:
+                print(f"[ALLOCATOR] Trade blocked for {symbol}")
+                return
+
+            # абсолютный риск в деньгах для allocator'а и heat
+            risk_amount = equity * risk_pct
+
+            # =====================================================
+            # ТОЛЬКО ТЕПЕРЬ БЛОКИРУЕМ СИМВОЛ
+            # =====================================================
+
+            self.positions[symbol] = {"state": "opening", "risk_amount": risk_amount}
+
+            # =====================================================
+            # РАСЧЕТ РАЗМЕРА ПОЗИЦИИ
+            # =====================================================
+
+            size = await self.compute_position_size(
+                stop_distance,
+                s,
+                custom_risk_pct=risk_pct
+            )
+
+            if size <= 0:
+                raise ValueError("Invalid position size")
+
+            # дополнительная confidence логика
             if self.MIN_CONFIDENCE_HARD <= confidence < self.MID_CONFIDENCE:
                 size *= 0.5
 
@@ -967,7 +1042,10 @@ class TradingEngine:
 
             trade_id = f"{symbol}-{int(time.time())}"
 
-            # === ОТКРЫВАЕМ МАРКЕТ ОРДЕР ===
+            # =====================================================
+            # ОТКРЫВАЕМ МАРКЕТ ОРДЕР
+            # =====================================================
+
             try:
                 order_id = await self.broker.open_market_order(symbol, side, size)
             except Exception:
@@ -977,7 +1055,10 @@ class TradingEngine:
             if not order_id:
                 raise ValueError("Order ID is None")
 
-            # === Расчет SL/TP ===
+            # =====================================================
+            # РАСЧЕТ SL / TP
+            # =====================================================
+
             if side == PositionSide.LONG:
                 sl_price = price - stop_distance
                 tp1_price = price + stop_distance * tp1_r
@@ -989,14 +1070,20 @@ class TradingEngine:
                 tp2_price = price - stop_distance * tp2_mult
                 tp3_price = price - stop_distance * tp3_mult
 
-            # === Ставим SL ===
+            # =====================================================
+            # SL
+            # =====================================================
+
             try:
                 sl_id = await self.broker.place_stop_loss_market(symbol, side, size, sl_price)
             except Exception:
                 self._register_rest_error("open_position:place_sl")
                 sl_id = None
 
-            # === TP ордера ===
+            # =====================================================
+            # TP
+            # =====================================================
+
             tp1_size, tp2_size, tp3_size = await self._split_tp_sizes(symbol, size, price)
 
             tp1_id = tp2_id = tp3_id = None
@@ -1010,9 +1097,9 @@ class TradingEngine:
             except Exception:
                 self._register_rest_error("open_position:place_tp")
 
-            # ==========================================
-            # ФИКСИРУЕМ ПОЛНОЦЕННУЮ ПОЗИЦИЮ
-            # ==========================================
+            # =====================================================
+            # ФИКСИРУЕМ ПОЗИЦИЮ
+            # =====================================================
 
             self.positions[symbol] = {
                 "state": "open",
@@ -1057,20 +1144,21 @@ class TradingEngine:
                 "structure_score": s.get("structure_score"),
                 "liquidity_score": s.get("liquidity_score"),
                 "pattern_quality": s.get("pattern_quality"),
+                # ключ для allocator'а / portfolio heat
+                "risk_amount": risk_amount,
             }
 
             self.log_trade(
                 f"id={trade_id};event=OPEN;symbol={symbol};side={side.value};entry={price:.4f};"
                 f"sl={sl_price:.4f};tp1={tp1_price:.4f};tp2={tp2_price:.4f};tp3={tp3_price:.4f};"
                 f"size_total={size:.6f};mode={engine_mode_cfg.get('name', 'Unknown')};atr={atr:.4f};"
-                f"confidence={confidence:.3f}"
+                f"confidence={confidence:.3f};risk_pct={risk_pct:.4f}"
             )
 
         except Exception as e:
             print(f"[ENGINE ERROR] open_position: {e}")
             self.positions.pop(symbol, None)
             return
-
 
     # ---------------------------------------------------------
     # СУЩЕСТВУЮЩАЯ ПОЗИЦИЯ
@@ -1174,7 +1262,6 @@ class TradingEngine:
                 f"size={size_remaining:.6f}"
             )
 
-
     # ---------------------------------------------------------
     # PRICE UPDATE / КОМБИНИРОВАННЫЙ ТРЕЙЛИНГ 4.2
     # ---------------------------------------------------------
@@ -1257,7 +1344,6 @@ class TradingEngine:
                         f"price={price:.4f};new_sl={target_be:.4f};mfe={pos['mfe']:.2f}"
                     )
 
-
         # ---------------- TP-логика ----------------
 
         # TP1
@@ -1280,7 +1366,6 @@ class TradingEngine:
                     f"remaining={pos['size_remaining']:.6f};new_sl={be_price:.4f}"
                 )
 
-
         # TP2
         if pos["tp1_hit"] and not pos["tp2_hit"]:
             if (side == PositionSide.LONG and price >= tp2) or (side == PositionSide.SHORT and price <= tp2):
@@ -1291,7 +1376,6 @@ class TradingEngine:
                     f"id={trade_id};event=TP2;symbol={symbol};side={side.value};price={price:.4f};"
                     f"remaining={pos['size_remaining']:.6f}"
                 )
-
 
         # ---------------- TRAILING AFTER TP2 ----------------
         if pos.get("tp2_hit") and pos.get("size_remaining", 0) > 0:
@@ -1317,7 +1401,6 @@ class TradingEngine:
                         if current_sl is None or new_sl < current_sl:
                             await self._move_stop(symbol, pos, new_sl)
 
-
         # TP3
         if pos["tp2_hit"] and not pos["tp3_hit"]:
             if (side == PositionSide.LONG and price >= tp3) or (side == PositionSide.SHORT and price <= tp3):
@@ -1330,7 +1413,6 @@ class TradingEngine:
 
                 await self.close_position(symbol, reason="TP3_LOGICAL")
                 return
-
 
     # ---------------------------------------------------------
     # ЗАКРЫТИЕ ПОЗИЦИИ
@@ -1430,6 +1512,9 @@ class TradingEngine:
             # ДВУХФАЗНОЕ ЗАКРЫТИЕ (Production-safe)
             # ==========================================
 
+            # для allocator'а: позиция больше не несёт риск
+            pos["risk_amount"] = 0.0
+
             pos["state"] = "closed"
             pos["status"] = "CLOSED"
             pos["closed_ts"] = time.time()
@@ -1440,7 +1525,6 @@ class TradingEngine:
             pos["state"] = "open"
             self._register_internal_error(f"close_position:fatal:{repr(e)}")
             return
-
 
     # ---------------------------------------------------------
     # SYNC + АВТОВОССТАНОВЛЕНИЕ SL/TP
@@ -1537,8 +1621,11 @@ class TradingEngine:
                     "trailing_active": False,
                     "mfe": 0.0,
                     "mae": 0.0,
-                    "mfe_price": entry,   
-                    "price_history": [entry],                    
+                    "mfe_price": entry,
+                    "price_history": [entry],
+                    # восстановленные позиции считаем с нулевым heat,
+                    # пока не будет нового сигнала/перерасчёта
+                    "risk_amount": 0.0,
                 }
 
                 self.log_trade(
@@ -1577,7 +1664,6 @@ class TradingEngine:
                     )
                     pos[key] = None
                     await self._restore_tp(symbol, pos, key, level)
-
 
     def _classify_orders_for_symbol(
         self,

@@ -344,3 +344,51 @@ async def fetch_orderbook(
 
     _orderbook_cache.set(cache_key, result)
     return result
+
+# ==========================================================
+#   ASYNC WRAPPER FOR BACKTEST
+# ==========================================================
+
+async def load_ohlcv(
+    session: aiohttp.ClientSession,
+    symbol: str,
+    interval: str = "1",
+    limit: int = 200
+):
+    """
+    Async версия для backtest.
+    Возвращает список свечей:
+    [
+        {
+            "timestamp": int,
+            "open": float,
+            "high": float,
+            "low": float,
+            "close": float,
+            "volume": float
+        }
+    ]
+    """
+
+    raw_klines = await fetch_klines(session, symbol, interval, limit)
+
+    if not raw_klines:
+        return []
+
+    candles = []
+
+    for k in raw_klines:
+        try:
+            candles.append({
+                "timestamp": int(k[0]),
+                "open": float(k[1]),
+                "high": float(k[2]),
+                "low": float(k[3]),
+                "close": float(k[4]),
+                "volume": float(k[5]),
+            })
+        except Exception:
+            continue
+
+    candles.reverse()  # oldest → newest
+    return candles
