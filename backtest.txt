@@ -1619,3 +1619,4 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
 
 
 
+
