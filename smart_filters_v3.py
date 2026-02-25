@@ -86,6 +86,40 @@ def _rolling_atr_from_ohlc(klines: List[List[Any]], window: int = 14) -> float:
     return sum(trs) / len(trs)
 
 
+def _normalize_klines_to_ohlcv_lists(klines: List[Any]) -> List[List[Any]]:
+    """
+    Приводит свечи к единому формату [ts, open, high, low, close, volume].
+
+    Поддерживаемые входы:
+    - классический REST-формат list[list] (Bybit/бинанс-стиль)
+    - list[dict] из v30-модулей
+    """
+    if not klines:
+        return []
+
+    first = klines[0]
+
+    if isinstance(first, list):
+        return klines
+
+    if not isinstance(first, dict):
+        return []
+
+    normalized: List[List[Any]] = []
+    for c in klines:
+        if not isinstance(c, dict):
+            continue
+        ts = c.get("timestamp", c.get("ts", c.get("time", 0)))
+        o = c.get("open", c.get("o", c.get("Open", 0)))
+        h = c.get("high", c.get("h", c.get("High", 0)))
+        l = c.get("low", c.get("l", c.get("Low", 0)))
+        cl = c.get("close", c.get("c", c.get("Close", 0)))
+        v = c.get("volume", c.get("v", c.get("Volume", 0)))
+        normalized.append([ts, o, h, l, cl, v])
+
+    return normalized
+
+
 def _compute_htf_trend_score(
     trend_15m: Optional[float],
     trend_1h: Optional[float],
@@ -165,6 +199,7 @@ def _detect_htf_momentum_divergence(
     lookback: int = 30,
     rsi_period: int = 14,
 ) -> Dict[str, Optional[Any]]:
+
     """
     HTF momentum divergence:
     - bullish: цена делает более низкий минимум, RSI делает более высокий минимум
@@ -265,6 +300,7 @@ def _build_volume_profile(
     price_max = max(highs)
     if price_max <= price_min:
         return None
+
 
     step = (price_max - price_min) / buckets
     if step <= 0:
@@ -465,6 +501,7 @@ class SmartFilters:
     def _get_factor_boost(self) -> float:
         vals = list(self._factor_perf.values())
         if not vals:
+
             return 1.0
         avg_perf = sum(vals) / len(vals)
         boost = 1.0 + (avg_perf - 1.0) * 0.2
@@ -665,6 +702,7 @@ class SmartFilters:
         return {
             "cluster": cluster,
             "volatility_score": vol_score,
+
             "meta": meta,
         }
 
@@ -865,6 +903,7 @@ class SmartFilters:
         elif cluster == "expansion":
             w["momentum"] += 0.2
             w["delta"] += 0.2
+
         elif cluster == "contraction":
             w["structure"] += 0.2
             w["noise"] += 0.2
@@ -1065,6 +1104,7 @@ class SmartFilters:
         s15 = _sign(trend_15m)
         s1h = _sign(trend_1h)
         s4h = _sign(trend_4h)
+
         signs = [s for s in (s15, s1h, s4h) if s != 0]
 
         if len(signs) >= 2:
@@ -1241,34 +1281,38 @@ class SmartFilters:
         extra_filters_ok: Dict[str, bool],
         global_risk_proxy: Optional[float] = None,
     ) -> Dict[str, Any]:
+        klines_compat = _normalize_klines_to_ohlcv_lists(klines_1m)
+        closes_compat = [float(c[4]) for c in klines_compat] if klines_compat else closes_1m
+
         # 0) HTF-structure
-        htf_structure_ctx = compute_htf_structure(klines_1m)
+        htf_structure_ctx = compute_htf_structure(klines_compat)
 
         # 0.1) HTF-momentum divergence
         # Для дивергенции ожидаем closes в порядке oldest → newest
-        closes_for_mom = [float(c[4]) for c in klines_1m]
+        closes_for_mom = closes_compat
         htf_momentum_ctx = _detect_htf_momentum_divergence(closes_for_mom)
 
         # 0.2) Volume profile
-        vp_raw = _build_volume_profile(klines_1m)
+        vp_raw = _build_volume_profile(klines_compat)
         volume_profile_ctx = _interpret_volume_profile(vp_raw)
 
         # 1) режим инструмента
         symbol_regime = self.detect_symbol_regime(
             closes_1m,
-            klines_1m,
+            klines_compat,
             liquidity_bias=liquidity_bias,
             noise_level=noise_level,
             trend_15m=trend_15m,
             trend_1h=trend_1h,
             trend_4h=trend_4h,
+
             htf_structure_ctx=htf_structure_ctx,
         )
 
         # 2) кластер волатильности
         vol_cluster = self.detect_volatility_cluster(
             closes_1m,
-            klines_1m,
+            klines_compat,
         )
 
         # 3) рыночный контекст
