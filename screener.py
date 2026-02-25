@@ -54,7 +54,7 @@ from footprint import compute_footprint_zones
 
 from smart_filters_v3 import apply_smartfilters_v3
 
-from elite_reversal_engine import EliteReversalEngine
+from v30.elite_reversal_engine import EliteReversalEngine
 
 # =====================================================
 # GLOBALS / ENGINES
@@ -518,165 +518,6 @@ def evaluate_orderbook_quality(orderbook: dict, last_price: float):
         bids = orderbook.get("b", []) or orderbook.get("bids", [])
         asks = orderbook.get("a", []) or orderbook.get("asks", [])
         if not bids or not asks:
-            return False, {}
-
-        bids_sorted = sorted(bids, key=lambda x: float(x[0]), reverse=True)
-        asks_sorted = sorted(asks, key=lambda x: float(x[0]))
-
-        best_bid = float(bids_sorted[0][0])
-        best_ask = float(asks_sorted[0][0])
-
-        if best_ask <= 0 or best_bid <= 0 or best_ask <= best_bid:
-            return False, {}
-
-        mid = (best_ask + best_bid) / 2
-        spread_pct = (best_ask - best_bid) / mid * 100
-
-        depth_n = 10
-        bid_vol = sum(float(x[1]) for x in bids_sorted[:depth_n])
-        ask_vol = sum(float(x[1]) for x in asks_sorted[:depth_n])
-
-        total_vol = bid_vol + ask_vol
-
-        max_spread_pct = 1.0
-        if last_price > 100:
-            min_total_vol = 150.0
-        elif last_price > 10:
-            min_total_vol = 80.0
-        else:
-            min_total_vol = 30.0
-
-        ok = True
-        if spread_pct > max_spread_pct:
-            ok = False
-        if total_vol < min_total_vol:
-            ok = False
-
-        return ok, {
-            "spread_pct": spread_pct,
-            "bid_vol_10": bid_vol,
-            "ask_vol_10": ask_vol,
-            "total_vol_10": total_vol,
-        }
-    except Exception as e:
-        log_error(e)
-        return False, {}
-
-
-def compute_impulse_score(closes, volumes):
-    try:
-        if len(closes) < 5:
-            return 0.0
-
-        c0, c1, c2, c3 = closes[0], closes[1], closes[2], closes[3]
-        v0, v1, v2 = volumes[0], volumes[1], volumes[2]
-
-        d01 = (c0 - c1) / max(c1, 1e-7) * 100
-        d12 = (c1 - c2) / max(c2, 1e-7) * 100
-        d23 = (c2 - c3) / max(c3, 1e-7) * 100
-
-        acc1 = d01 - d12
-        acc2 = d12 - d23
-
-        vol_avg = (v0 + v1 + v2) / 3
-        vol_spike = (v0 - vol_avg) / max(vol_avg, 1e-7) * 100
-
-        score = 0.0
-
-        if abs(acc1) > 0.2 and abs(acc2) > 0.2 and vol_spike > 20:
-            score += 5.0
-
-        if abs(d01) < 0.05 and vol_spike < -20:
-            score -= 3.0
-
-        if score > 8:
-            score = 8
-        if score < -5:
-            score = -5
-
-        return score
-    except Exception as e:
-        log_error(e)
-        return 0.0
-
-
-def infer_direction_side(signal_type: str) -> Optional[str]:
-    if any(x in signal_type for x in ["Pump → Dump", "DUMP"]):
-        return "bearish"
-    if any(x in signal_type for x in ["Dump → Pump", "PUMP"]):
-        return "bullish"
-    return None
-
-
-def apply_alignment_penalties(
-    rating: float,
-    direction_side: Optional[str],
-    trend_1h: float,
-    trend_4h: float,
-    flow_status: str,
-    impulse_score: float,
-) -> float:
-    adjusted = rating
-
-    if direction_side == "bearish":
-        if flow_status == "aggressive_buyers":
-            adjusted *= 0.9
-        if impulse_score > 2:
-            adjusted *= 0.9
-
-    elif direction_side == "bullish":
-        if flow_status == "aggressive_sellers":
-            adjusted *= 0.9
-        if impulse_score < -2:
-            adjusted *= 0.9
-
-    return adjusted
-
-
-def amplify_confidence(
-    base_conf: float,
-    rating: int,
-    adaptive_min_score: int,
-    btc_factor: float,
-    trend_1h: float,
-    trend_4h: float,
-    direction_side: Optional[str],
-) -> float:
-    conf = base_conf
-
-    distance = rating - adaptive_min_score
-
-    if distance > 12:
-        conf *= 1.05
-    elif distance > 6:
-        conf *= 1.03
-    elif distance < 0:
-        conf *= 0.92
-
-    if btc_factor > 1.08:
-        conf *= 1.06
-    elif btc_factor < 0.92:
-        conf *= 0.94
-
-    if direction_side == "bullish":
-        if trend_1h > 0 and trend_4h > 0:
-            conf *= 1.06
-        elif trend_1h < 0 and trend_4h < 0:
-            conf *= 0.94
-
-    elif direction_side == "bearish":
-        if trend_1h < 0 and trend_4h < 0:
-            conf *= 1.06
-        elif trend_1h > 0 and trend_4h > 0:
-            conf *= 0.94
-
-    if rating >= 85:
-        conf *= 1.03
-    elif rating < adaptive_min_score + 3:
-        conf *= 0.95
-
-    max_cap = 0.88
-    min_cap = 0.40
 
     conf = max(min_cap, min(conf, max_cap))
 
@@ -758,6 +599,7 @@ def _passes_strict_reversal_filters(
 
     if require_structure and not structure_ok:
         return False
+
     if require_event and not event_ok:
         return False
     return True
@@ -838,6 +680,7 @@ def _build_v31_structure_ctx(
 ) -> Dict[str, Any]:
     if len(closes_1m) < 5:
         return {
+
             "structure": "neutral",
             "clarity_index": 0.0,
             "impulse_strength": 0.0,
@@ -874,22 +717,22 @@ def _build_v31_regime_ctx(
 
     if atr_pct < 0.2:
         atr_percentile = 0.3
-    elif atr_pct < 0.6:
-        atr_percentile = 0.5
-    elif atr_pct < 1.5:
-        atr_percentile = 0.7
+    elif atr_pct < 0.5:
+        atr_percentile = 0.55
+    elif atr_pct < 1.0:
+        atr_percentile = 0.72
     else:
-        atr_percentile = 0.9
+        atr_percentile = 0.88
 
     if vol_regime_1h in ("high_vol", "chaotic") or vol_regime_4h in ("high_vol", "chaotic"):
-        regime_name = "EXPANSION"
+        regime = "EXHAUSTION" if atr_percentile > 0.7 else "COMPRESSION"
     elif vol_regime_1h == "low_vol" and vol_regime_4h == "low_vol":
-        regime_name = "LOW_VOL_RANGE"
+        regime = "LOW_VOL_RANGE"
     else:
-        regime_name = "RANGE"
+        regime = "RANGE"
 
     return {
-        "regime": regime_name,
+        "regime": regime,
         "atr_percentile": atr_percentile,
     }
 
@@ -899,25 +742,41 @@ def _build_v31_htf_ctx(
     trend_4h: float,
     momentum_div_1h: Optional[str],
     momentum_div_4h: Optional[str],
+    structure_1h: str,
+    structure_4h: str,
+    event_1h: Optional[str],
+    event_4h: Optional[str],
     htf_liq_1h: Dict[str, Any],
     htf_liq_4h: Dict[str, Any],
 ) -> Dict[str, Any]:
-    signed_trend_strength = (trend_1h + trend_4h) / 100.0
+    signed_trend_strength = (trend_1h * 0.4 + trend_4h * 0.6) / 100.0
 
-    if trend_1h > 0 and trend_4h > 0:
+    if signed_trend_strength > 0.01:
         bias = "bullish"
-    elif trend_1h < 0 and trend_4h < 0:
+    elif signed_trend_strength < -0.01:
         bias = "bearish"
     else:
         bias = "neutral"
 
-    if abs(trend_1h) > 3 or abs(trend_4h) > 3:
+    if abs(signed_trend_strength) > 0.04:
+        htf_regime = "HTF_STRONG_TREND"
+    elif abs(signed_trend_strength) > 0.018:
         htf_regime = "HTF_TREND"
     else:
         htf_regime = "HTF_RANGE"
 
     exhausted = False
-    if momentum_div_1h in ("bullish", "bearish") or momentum_div_4h in ("bullish", "bearish"):
+
+    if momentum_div_1h == "bearish" and bias == "bullish":
+        exhausted = True
+    if momentum_div_1h == "bullish" and bias == "bearish":
+        exhausted = True
+    if momentum_div_4h == "bearish" and bias == "bullish":
+        exhausted = True
+    if momentum_div_4h == "bullish" and bias == "bearish":
+        exhausted = True
+
+    if event_1h == "CHOCH" or event_4h == "CHOCH":
         exhausted = True
 
     alignment_score = 0.5
@@ -1079,6 +938,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         event_15m = htf["event_15m"]
         event_1h = htf["event_1h"]
+
+        event_1h = htf["event_1h"]
         event_4h = htf["event_4h"]
 
         strength_15m = htf["strength_15m"]
@@ -1158,6 +1019,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     structure_ctx = _build_v31_structure_ctx(
         closes_1m=closes_1m,
         highs_1m=highs_1m,
+
         lows_1m=lows_1m,
         volumes_1m=volumes_1m,
     )
@@ -1296,6 +1158,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         if direction_label in ("Dump → Pump", "bullish"):
             direction_side = "bullish"
+
             final_label = "Dump → Pump"
         else:
             direction_side = "bearish"
