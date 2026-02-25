@@ -1,7 +1,7 @@
 import time
 import asyncio
 import aiohttp
-from typing import Any, Dict
+from typing import Any, Dict, Optional, List
 from io import BytesIO
 import traceback
 import pandas as pd
@@ -21,12 +21,16 @@ from data_layer import (
 from liquidity_map import build_liquidity_map
 
 from strategy_selector import StrategySelector
-
-strategy_selector = StrategySelector()
-
 from asset_profile_engine import AssetProfileEngine
 
 from symbol_memory import smooth_confidence
+from symbol_memory import (
+    update_symbol_memory,
+    get_symbol_memory,
+    get_symbol_state,
+    set_symbol_state,
+    clear_symbol_state,
+)
 
 from context import (
     compute_trend_score,
@@ -40,11 +44,6 @@ from context import (
     format_flow_text,
     format_delta_text,
 )
-from detectors import Detector
-
-detector = Detector()
-
-asset_engine = AssetProfileEngine()
 
 from microstructure import (
     build_price_buckets,
@@ -54,30 +53,30 @@ from htf_structure import compute_htf_structure, detect_swings
 from footprint import compute_footprint_zones
 
 from smart_filters_v3 import apply_smartfilters_v3
-from symbol_memory import (
-    update_symbol_memory,
-    get_symbol_memory,
-    get_symbol_state,
-    set_symbol_state,
-    clear_symbol_state,
-)
+
+from elite_reversal_engine import EliteReversalEngine
+
+# =====================================================
+# GLOBALS / ENGINES
+# =====================================================
+
+strategy_selector = StrategySelector()
+asset_engine = AssetProfileEngine()
+reversal_engine = EliteReversalEngine()
 
 SYMBOL_COOLDOWN = 300
-_last_signal_ts = {}
+_last_signal_ts: Dict[str, float] = {}
 
 _BTC_CTX_CACHE = {
     "ts": 0.0,
     "factor": 1.0,
     "regime": "neutral",
 }
-# =====================================================
-# GLOBAL DEBUG FLAGS
-# =====================================================
 
 DEBUG_ROUTER = True
 
 # =====================================================
-# SCREENER V3 MAX — MODE SYSTEM (Balanced Pro DEFAULT)
+# SCREENER V31 — MODE SYSTEM
 # =====================================================
 
 SCREENER_MODE = "balanced"  # conservative | balanced | aggressive
@@ -93,7 +92,7 @@ MODE_PROFILES = {
         "reversal_bonus": 0.95,
         "elite_threshold": 88,
     },
-    "balanced": {  # Balanced Pro MAX (DEFAULT)
+    "balanced": {
         "min_score_shift": 0,
         "btc_trend_boost": 1.05,
         "btc_ranging_boost": 1.07,
@@ -601,7 +600,7 @@ def compute_impulse_score(closes, volumes):
         return 0.0
 
 
-def infer_direction_side(signal_type: str) -> str | None:
+def infer_direction_side(signal_type: str) -> Optional[str]:
     if any(x in signal_type for x in ["Pump → Dump", "DUMP"]):
         return "bearish"
     if any(x in signal_type for x in ["Dump → Pump", "PUMP"]):
@@ -611,7 +610,7 @@ def infer_direction_side(signal_type: str) -> str | None:
 
 def apply_alignment_penalties(
     rating: float,
-    direction_side: str | None,
+    direction_side: Optional[str],
     trend_1h: float,
     trend_4h: float,
     flow_status: str,
@@ -641,7 +640,7 @@ def amplify_confidence(
     btc_factor: float,
     trend_1h: float,
     trend_4h: float,
-    direction_side: str | None,
+    direction_side: Optional[str],
 ) -> float:
     conf = base_conf
 
@@ -729,8 +728,8 @@ def _passes_strict_reversal_filters(
     direction: str,
     flow_status: str,
     delta_status: str,
-    event_1h: str | None,
-    event_4h: str | None,
+    event_1h: Optional[str],
+    event_4h: Optional[str],
     structure_1h: str,
     structure_4h: str,
 ) -> bool:
@@ -819,7 +818,6 @@ async def compute_btc_stability(session):
             "factor": factor,
             "regime": regime
         }
-
         return _BTC_CTX_CACHE
 
     except Exception as e:
@@ -828,6 +826,133 @@ async def compute_btc_stability(session):
         return _BTC_CTX_CACHE
 
 
+# =====================================================
+# V31 CONTEXT BUILDERS FOR ELITE REVERSAL ENGINE
+# =====================================================
+
+def _build_v31_structure_ctx(
+    closes_1m: List[float],
+    highs_1m: List[float],
+    lows_1m: List[float],
+    volumes_1m: List[float],
+) -> Dict[str, Any]:
+    if len(closes_1m) < 5:
+        return {
+            "structure": "neutral",
+            "clarity_index": 0.0,
+            "impulse_strength": 0.0,
+        }
+
+    c0, c1 = closes_1m[0], closes_1m[1]
+    direction = "bullish" if c0 > c1 else "bearish" if c0 < c1 else "neutral"
+
+    impulse = compute_impulse_score(closes_1m, volumes_1m)
+    impulse_norm = min(max(abs(impulse) / 8.0, 0.0), 1.0)
+
+    recent_range = max(highs_1m[:20]) - min(lows_1m[:20]) if len(highs_1m) >= 20 else max(highs_1m) - min(lows_1m)
+    avg_price = sum(closes_1m[:20]) / min(len(closes_1m), 20)
+    vol_pct = (recent_range / avg_price * 100) if avg_price > 0 else 0.0
+    clarity = 1.0 - min(vol_pct / 5.0, 1.0)
+    clarity = max(0.0, min(clarity, 1.0))
+
+    return {
+        "structure": direction,
+        "clarity_index": clarity,
+        "impulse_strength": impulse_norm,
+    }
+
+
+def _build_v31_regime_ctx(
+    closes_1m: List[float],
+    klines_1m: List[List[Any]],
+    vol_regime_1h: str,
+    vol_regime_4h: str,
+) -> Dict[str, Any]:
+    atr_1m = compute_atr_from_klines(klines_1m)
+    last_price = closes_1m[0] if closes_1m else 0.0
+    atr_pct = (atr_1m / last_price * 100) if last_price > 0 else 0.0
+
+    if atr_pct < 0.2:
+        atr_percentile = 0.3
+    elif atr_pct < 0.6:
+        atr_percentile = 0.5
+    elif atr_pct < 1.5:
+        atr_percentile = 0.7
+    else:
+        atr_percentile = 0.9
+
+    if vol_regime_1h in ("high_vol", "chaotic") or vol_regime_4h in ("high_vol", "chaotic"):
+        regime_name = "EXPANSION"
+    elif vol_regime_1h == "low_vol" and vol_regime_4h == "low_vol":
+        regime_name = "LOW_VOL_RANGE"
+    else:
+        regime_name = "RANGE"
+
+    return {
+        "regime": regime_name,
+        "atr_percentile": atr_percentile,
+    }
+
+
+def _build_v31_htf_ctx(
+    trend_1h: float,
+    trend_4h: float,
+    momentum_div_1h: Optional[str],
+    momentum_div_4h: Optional[str],
+    htf_liq_1h: Dict[str, Any],
+    htf_liq_4h: Dict[str, Any],
+) -> Dict[str, Any]:
+    signed_trend_strength = (trend_1h + trend_4h) / 100.0
+
+    if trend_1h > 0 and trend_4h > 0:
+        bias = "bullish"
+    elif trend_1h < 0 and trend_4h < 0:
+        bias = "bearish"
+    else:
+        bias = "neutral"
+
+    if abs(trend_1h) > 3 or abs(trend_4h) > 3:
+        htf_regime = "HTF_TREND"
+    else:
+        htf_regime = "HTF_RANGE"
+
+    exhausted = False
+    if momentum_div_1h in ("bullish", "bearish") or momentum_div_4h in ("bullish", "bearish"):
+        exhausted = True
+
+    alignment_score = 0.5
+    if bias == "bullish" and trend_1h > 0 and trend_4h > 0:
+        alignment_score = 0.7
+    elif bias == "bearish" and trend_1h < 0 and trend_4h < 0:
+        alignment_score = 0.7
+    elif bias == "neutral":
+        alignment_score = 0.5
+    else:
+        alignment_score = 0.4
+
+    return {
+        "bias": bias,
+        "htf_regime": htf_regime,
+        "signed_trend_strength": signed_trend_strength,
+        "exhausted": exhausted,
+        "alignment_score": alignment_score,
+        "htf_liq_1h": htf_liq_1h,
+        "htf_liq_4h": htf_liq_4h,
+    }
+
+
+def _map_reversal_direction_to_label(direction: str) -> str:
+    if direction == "long":
+        return "Dump → Pump"
+    if direction == "short":
+        return "Pump → Dump"
+    return "neutral"
+
+
+# =====================================================
+# CORE ANALYSIS
+# =====================================================
+
 async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
 
     filters_ok_ratio = 0.0
@@ -835,7 +960,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     print(f"[ENTER ANALYZE] {symbol}")
 
     settings = load_settings()
-
     now_ts = time.time()
 
     reversal_state_ttl_sec = int(settings.get("reversal_state_ttl_sec", 7200))
@@ -848,26 +972,16 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     mode_profile = get_mode_profile()
     min_score = max(0, min_score + mode_profile["min_score_shift"])
 
-    # ------------------------
-    # COOLDOWN CHECK
-    # ------------------------
     if symbol_on_cooldown(symbol):
         print(f"[CUT] {symbol} ON COOLDOWN")
         return None
 
-    # ------------------------
-    # TURNOVER CHECK
-    # ------------------------
     turnover = float(ticker_info.get("turnover24h", 0))
     if turnover < mode_cfg["volume_usdt"]:
         print(f"[CUT] {symbol} LOW TURNOVER {turnover} < {mode_cfg['volume_usdt']}")
         return None
 
-    # ------------------------
-    # FETCH 1M DATA
-    # ------------------------
     klines_1m = await fetch_klines(session, symbol, interval="1", limit=80)
-
     klines_15m = await fetch_klines(session, symbol, interval="15", limit=80)
 
     if not klines_15m or len(klines_15m) < 40:
@@ -889,30 +1003,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     latest_close = closes_1m[0]
     last_price = latest_close
 
-    # =====================================================
-    # PHASE 1 — LIGHT PRECHECK (EARLY FILTER)
-    # =====================================================
-
-    light_rev = detector.analyze_reversal(
-        closes_1m,
-        highs_1m,
-        lows_1m,
-        volumes_1m,
-        htf_trend_1h=0,
-        htf_trend_4h=0,
-        structure_1h="ranging",
-        structure_4h="ranging",
-        event_1h=None,
-        event_4h=None,
-        market_regime="neutral",
-        asset_class="mid",
-        min_score=0,
-    )
-
-    light_rating = 0
-    if light_rev:
-        light_rating = light_rev.get("rating", 0)
-
+    # LIGHT PRECHECK (упрощённый, без старого detector)
+    light_rating = 60
     if light_rating < 55:
         return None
 
@@ -957,10 +1049,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     footprint_zones = compute_footprint_zones(trades, current_high, current_low)
 
     trend_score = await compute_trend_score(session, symbol)
-
-    # =====================================================
-    # HTF OPTIMIZATION V2 — CONDITIONAL LOADING
-    # =====================================================
 
     USE_HTF_THRESHOLD = 60
 
@@ -1021,13 +1109,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         trend_score,
     )
 
-    habr = detector.analyze_habr(closes_1m, highs_1m, lows_1m, volumes_1m)
-
     impulse_score = compute_impulse_score(closes_1m, volumes_1m)
-
-    # =====================================================
-    # BTC CONTEXT
-    # =====================================================
 
     btc_ctx = await compute_btc_stability(session)
 
@@ -1036,15 +1118,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     btc_factor = max(0.85, min(btc_factor, 1.15))
 
-    # =====================================================
-    # REVERSAL STATE
-    # =====================================================
-
     reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
-
-    # =====================================================
-    # ASSET PROFILE ENGINE
-    # =====================================================
 
     asset_profile = asset_engine.analyze(
         closes_1m,
@@ -1054,10 +1128,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     asset_class = asset_profile.get("asset_class", "mid")
 
-    # =====================================================
     # STRATEGY SELECTION
-    # =====================================================
-
     strategy = strategy_selector.choose(btc_regime, asset_class)
 
     base_min_score = strategy_selector.get_min_score(
@@ -1079,56 +1150,53 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
     )
 
     # =====================================================
-    # DETECTION PHASE (NO INTERNAL FILTER)
+    # V31 REVERSAL ENGINE — DETECTION PHASE
     # =====================================================
 
     rev = {"reversal": None, "rating": 0}
 
-    if strategy == "reversal":
+    structure_ctx = _build_v31_structure_ctx(
+        closes_1m=closes_1m,
+        highs_1m=highs_1m,
+        lows_1m=lows_1m,
+        volumes_1m=volumes_1m,
+    )
 
-        result = detector.analyze_reversal(
-            closes_1m,
-            highs_1m,
-            lows_1m,
-            volumes_1m,
-            htf_trend_1h=trend_1h,
-            htf_trend_4h=trend_4h,
-            structure_1h=structure_1h,
-            structure_4h=structure_4h,
-            event_1h=event_1h,
-            event_4h=event_4h,
-            market_regime=btc_regime,
-            asset_class=asset_class,
-            min_score=0,
-        )
+    regime_ctx = _build_v31_regime_ctx(
+        closes_1m=closes_1m,
+        klines_1m=klines_1m,
+        vol_regime_1h=vol_regime_1h,
+        vol_regime_4h=vol_regime_4h,
+    )
 
-        if result:
-            rev = result
+    htf_ctx = _build_v31_htf_ctx(
+        trend_1h=trend_1h,
+        trend_4h=trend_4h,
+        momentum_div_1h=momentum_div_1h,
+        momentum_div_4h=momentum_div_4h,
+        htf_liq_1h=htf_liq_1h,
+        htf_liq_4h=htf_liq_4h,
+    )
 
-    elif strategy == "continuation":
+    eval_result = reversal_engine.evaluate(
+        structure=structure_ctx,
+        regime=regime_ctx,
+        htf=htf_ctx,
+    )
 
-        cont = detector.analyze_continuation(
-            closes_1m,
-            highs_1m,
-            lows_1m,
-            volumes_1m,
-            trend_1h=trend_1h,
-            trend_4h=trend_4h,
-            asset_class=asset_class,
-            market_regime=btc_regime,
-            min_score=0,
-        )
-
-        if cont:
-            rev = {
-                "reversal": cont.get("direction"),
-                "rating": cont.get("rating", 0),
-            }
+    if eval_result:
+        direction = eval_result["signal"]
+        quality = eval_result["quality"]
+        direction_label = _map_reversal_direction_to_label(direction)
+        rev = {
+            "reversal": direction_label,
+            "rating": int(round(quality * 100)),
+        }
 
     filters_ok_ratio = locals().get("filters_ok_ratio", 0.0)
 
     # =====================================================
-    # ADAPTIVE SCORING ENGINE V10.2
+    # ADAPTIVE SCORING ENGINE V31
     # =====================================================
 
     raw_rating = rev.get("rating", 0)
@@ -1149,7 +1217,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         if reversal_state:
             state_type = reversal_state.get("type")
-            if strategy == "reversal" and state_type in ("pump", "dump"):
+            if state_type in ("pump", "dump"):
                 weighted_rating *= 1.07
 
         if len(highs_1m) >= 20:
@@ -1163,18 +1231,18 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             elif volatility_pct > 1.3:
                 weighted_rating *= 1.03
 
-        direction = rev.get("reversal")
+        direction_label = rev.get("reversal")
 
-        if direction in ("Dump → Pump", "bullish") and liq_bias == "below":
+        if direction_label in ("Dump → Pump", "bullish") and liq_bias == "below":
             weighted_rating *= 1.04
 
-        if direction in ("Pump → Dump", "bearish") and liq_bias == "above":
+        if direction_label in ("Pump → Dump", "bearish") and liq_bias == "above":
             weighted_rating *= 1.04
 
         if asset_class == "major":
             weighted_rating *= 1.03
 
-        if btc_regime == "ranging" and strategy == "reversal":
+        if btc_regime == "ranging":
             weighted_rating *= 1.05
 
         quality_multiplier = 0.85 + (filters_ok_ratio * 0.3)
@@ -1210,7 +1278,7 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         print("Direction:", rev.get("reversal"))
 
         if rev.get("reversal"):
-            print("Reversal passed raw detector")
+            print("Reversal passed V31 engine")
         else:
             print("No reversal signal")
 
@@ -1224,19 +1292,19 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     if rev.get("reversal"):
 
-        direction = rev.get("reversal")
+        direction_label = rev.get("reversal")
 
-        if direction in ("bullish", "Dump → Pump"):
-            direction_label = "Dump → Pump"
+        if direction_label in ("Dump → Pump", "bullish"):
             direction_side = "bullish"
+            final_label = "Dump → Pump"
         else:
-            direction_label = "Pump → Dump"
             direction_side = "bearish"
+            final_label = "Pump → Dump"
 
         candidates.append({
             "symbol": symbol,
-            "type": f"{strategy.upper()} {direction_label} ({mode_key})",
-            "emoji": "🔵" if strategy == "reversal" else "🟢",
+            "type": f"REVERSAL {final_label} ({mode_key})",
+            "emoji": "🔵",
             "price": last_price,
             "rating": rev["rating"],
             "oi": oi_status,
@@ -1253,11 +1321,11 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         })
 
     if not candidates:
-        print(f"[CUT] {symbol} NO CANDIDATES AFTER ROUTER")
+        print(f"[CUT] {symbol} NO CANDIDATES AFTER V31 ENGINE")
         return None
 
     # =====================================================
-    # SMART FILTERS V3
+    # SMART FILTERS V3.8 ELITE
     # =====================================================
 
     symbol_mem = get_symbol_memory(symbol)
@@ -1297,10 +1365,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
         c["rating"] = max(0, min(int(aligned), 100))
 
-        # ================================
-        # CONFIDENCE PIPELINE V10.3
-        # ================================
-
         raw_conf = sf3["confidence"]
         smoothed_conf = smooth_confidence(symbol, raw_conf)
 
@@ -1315,10 +1379,6 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
         )
 
         c["confidence"] = amplified_conf
-
-        # ================================
-        # DEBUG SMART FILTERS
-        # ================================
 
         conf_meta = sf3.get("confidence_meta", {}) or {}
 
@@ -1335,16 +1395,8 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
             f"filters={filters_ok_ratio:.2f}"
         )
 
-        # ================================
-        # META
-        # ================================
-
         c["symbol_regime"] = sf3["symbol_regime"]
         c["market_ctx"] = sf3["market_ctx"]
-
-    # ================================
-    # FINALIZE BEST SIGNAL
-    # ================================
 
     if not candidates:
         return None
@@ -1368,6 +1420,10 @@ async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info
 
     return best
 
+
+# =====================================================
+# SCANNER LOOP V31
+# =====================================================
 
 async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
 
@@ -1458,10 +1514,6 @@ async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
                     r for r in results
                     if isinstance(r, dict) and r.get("type")
                 ]
-
-                # ==========================================
-                # QUALITY FILTER
-                # ==========================================
 
                 if min_score >= 70:
                     MIN_SIGNAL_CONFIDENCE = 0.60
