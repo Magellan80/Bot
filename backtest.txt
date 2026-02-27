@@ -1,577 +1,1804 @@
-C:\Users\Win10_Game_OS\Desktop\Bot>python run_v30_test.py
+import time
+import asyncio
+import aiohttp
+from typing import Any, Dict, Optional, List
+from io import BytesIO
+import traceback
+import pandas as pd
+import mplfinance as mpf
+from aiogram.types import BufferedInputFile
 
-Loading data (auto mode)...
+from config import get_current_mode, load_settings
+from data_layer import (
+    fetch_tickers,
+    fetch_klines,
+    fetch_open_interest,
+    fetch_funding_rate,
+    fetch_liquidations,
+    fetch_recent_trades,
+    fetch_orderbook,
+)
+from liquidity_map import build_liquidity_map
 
-[OK] Loaded 20000 5m candles from local file.
-[OK] Loaded 7000 15m candles from local file.
-[OK] Loaded 2000 1h candles from local file.
-[OK] Loaded 1000 4h candles from local file.
+from strategy_selector import StrategySelector
+from asset_profile_engine import AssetProfileEngine
 
-Loaded: 5m=20000, 15m=7000, 1h=2000, 4h=1000
+from symbol_memory import smooth_confidence
+from symbol_memory import (
+    update_symbol_memory,
+    get_symbol_memory,
+    get_symbol_state,
+    set_symbol_state,
+    clear_symbol_state,
+)
 
+from context import (
+    compute_trend_score,
+    compute_risk_score,
+    funding_bias,
+    interpret_liquidations,
+    analyze_flow_from_trades,
+    analyze_delta_from_trades,
+    format_funding_text,
+    format_liq_text,
+    format_flow_text,
+    format_delta_text,
+)
 
-Running V31 Institutional Backtest...
+from microstructure import (
+    build_price_buckets,
+    analyze_microstructure,
+)
+from htf_structure import compute_htf_structure, detect_swings
+from footprint import compute_footprint_zones
 
-Total 5m candles: 20000
-Starting Institutional loop...
+from smart_filters_v3 import apply_smartfilters_v3
 
-OPEN SHORT | Price: 122.13 | SL: 122.47 | Risk: 0.88%
-CLOSE | PnL: -88.0 | Equity: 9912.0 | DD: 0.88%
-OPEN SHORT | Price: 123.49 | SL: 123.84 | Risk: 0.68%
-CLOSE | PnL: -67.4 | Equity: 9844.6 | DD: 1.55%
-OPEN SHORT | Price: 122.36 | SL: 123.33 | Risk: 0.88%
-CLOSE | PnL: -22.33 | Equity: 9822.27 | DD: 1.78%
-OPEN SHORT | Price: 125.84 | SL: 127.36 | Risk: 0.88%
-CLOSE | PnL: -86.44 | Equity: 9735.83 | DD: 2.64%
-OPEN SHORT | Price: 128.11 | SL: 128.72 | Risk: 0.88%
-CLOSE | PnL: -85.68 | Equity: 9650.16 | DD: 3.5%
-OPEN SHORT | Price: 128.25 | SL: 129.02 | Risk: 0.88%
-CLOSE | PnL: 171.76 | Equity: 9821.92 | DD: 3.5%
-OPEN SHORT | Price: 118.11 | SL: 120.1 | Risk: 0.88%
-CLOSE | PnL: -73.4 | Equity: 9748.52 | DD: 3.5%
-OPEN SHORT | Price: 118.37 | SL: 118.65 | Risk: 0.88%
-CLOSE | PnL: -85.79 | Equity: 9662.73 | DD: 3.5%
-OPEN SHORT | Price: 125.18 | SL: 126.3 | Risk: 0.68%
-CLOSE | PnL: 72.56 | Equity: 9735.29 | DD: 3.5%
-OPEN SHORT | Price: 126.21 | SL: 126.66 | Risk: 0.8%
-CLOSE | PnL: 54.93 | Equity: 9790.22 | DD: 3.5%
-OPEN SHORT | Price: 125.73 | SL: 126.5 | Risk: 0.56%
-CLOSE | PnL: -20.65 | Equity: 9769.57 | DD: 3.5%
-OPEN SHORT | Price: 124.93 | SL: 125.43 | Risk: 0.48%
-CLOSE | PnL: -46.5 | Equity: 9723.07 | DD: 3.5%
-OPEN SHORT | Price: 125.83 | SL: 125.99 | Risk: 0.48%
-CLOSE | PnL: -46.28 | Equity: 9676.78 | DD: 3.5%
-OPEN SHORT | Price: 126.07 | SL: 126.29 | Risk: 0.48%
-CLOSE | PnL: -46.06 | Equity: 9630.72 | DD: 3.69%
-OPEN SHORT | Price: 126.21 | SL: 126.5 | Risk: 0.48%
-CLOSE | PnL: 75.88 | Equity: 9706.6 | DD: 3.69%
-OPEN SHORT | Price: 125.97 | SL: 126.29 | Risk: 0.48%
-CLOSE | PnL: 183.89 | Equity: 9890.48 | DD: 3.69%
-OPEN SHORT | Price: 125.78 | SL: 126.47 | Risk: 0.48%
-Progress: 7.5% | Trades: 16 | Equity: 9890.48
-CLOSE | PnL: -47.08 | Equity: 9843.41 | DD: 3.69%
-OPEN SHORT | Price: 125.44 | SL: 125.63 | Risk: 0.48%
-CLOSE | PnL: -46.85 | Equity: 9796.55 | DD: 3.69%
-OPEN SHORT | Price: 125.8 | SL: 125.98 | Risk: 0.48%
-CLOSE | PnL: 3.82 | Equity: 9800.37 | DD: 3.69%
-OPEN SHORT | Price: 126.15 | SL: 126.71 | Risk: 0.48%
-CLOSE | PnL: 46.0 | Equity: 9846.37 | DD: 3.69%
-OPEN SHORT | Price: 125.95 | SL: 126.11 | Risk: 0.48%
-CLOSE | PnL: 355.07 | Equity: 10201.45 | DD: 3.69%
-OPEN SHORT | Price: 124.34 | SL: 124.84 | Risk: 0.68%
-CLOSE | PnL: 87.68 | Equity: 10289.13 | DD: 3.69%
-OPEN SHORT | Price: 123.51 | SL: 124.03 | Risk: 0.68%
-CLOSE | PnL: -69.97 | Equity: 10219.16 | DD: 3.69%
-OPEN SHORT | Price: 122.04 | SL: 122.31 | Risk: 0.68%
-CLOSE | PnL: -20.59 | Equity: 10198.57 | DD: 3.69%
-Progress: 15.0% | Trades: 24 | Equity: 10198.57
-OPEN SHORT | Price: 123.59 | SL: 123.76 | Risk: 0.68%
-CLOSE | PnL: -69.35 | Equity: 10129.22 | DD: 3.69%
-OPEN SHORT | Price: 124.11 | SL: 124.31 | Risk: 0.68%
-CLOSE | PnL: -68.88 | Equity: 10060.34 | DD: 3.69%
-OPEN SHORT | Price: 124.34 | SL: 124.41 | Risk: 0.68%
-CLOSE | PnL: -28.32 | Equity: 10032.03 | DD: 3.69%
-OPEN SHORT | Price: 124.51 | SL: 124.7 | Risk: 0.68%
-CLOSE | PnL: 412.92 | Equity: 10444.95 | DD: 3.69%
-OPEN SHORT | Price: 123.65 | SL: 123.83 | Risk: 0.68%
-CLOSE | PnL: -71.03 | Equity: 10373.92 | DD: 3.69%
-OPEN SHORT | Price: 124.22 | SL: 124.31 | Risk: 0.68%
-CLOSE | PnL: 27.11 | Equity: 10401.04 | DD: 3.69%
-OPEN SHORT | Price: 124.21 | SL: 124.38 | Risk: 0.68%
-CLOSE | PnL: -70.73 | Equity: 10330.31 | DD: 3.69%
-OPEN SHORT | Price: 125.33 | SL: 125.5 | Risk: 0.68%
-CLOSE | PnL: 5.99 | Equity: 10336.3 | DD: 3.69%
-OPEN LONG | Price: 128.24 | SL: 128.07 | Risk: 0.68%
-CLOSE | PnL: -68.51 | Equity: 10267.79 | DD: 3.69%
-OPEN LONG | Price: 128.07 | SL: 127.88 | Risk: 0.68%
-CLOSE | PnL: -69.82 | Equity: 10197.97 | DD: 3.69%
-OPEN LONG | Price: 127.7 | SL: 127.54 | Risk: 0.68%
-CLOSE | PnL: -63.89 | Equity: 10134.08 | DD: 3.69%
-OPEN LONG | Price: 127.87 | SL: 127.4 | Risk: 0.68%
-CLOSE | PnL: -68.91 | Equity: 10065.17 | DD: 3.69%
-OPEN LONG | Price: 125.12 | SL: 124.81 | Risk: 0.68%
-CLOSE | PnL: -68.44 | Equity: 9996.72 | DD: 4.29%
-OPEN SHORT | Price: 123.13 | SL: 123.9 | Risk: 0.68%
-CLOSE | PnL: -10.59 | Equity: 9986.13 | DD: 4.39%
-OPEN SHORT | Price: 124.78 | SL: 125.1 | Risk: 0.68%
-CLOSE | PnL: 40.21 | Equity: 10026.34 | DD: 4.39%
-OPEN LONG | Price: 124.57 | SL: 124.38 | Risk: 0.68%
-CLOSE | PnL: -68.18 | Equity: 9958.16 | DD: 4.66%
-OPEN LONG | Price: 123.97 | SL: 123.78 | Risk: 0.68%
-CLOSE | PnL: -67.72 | Equity: 9890.44 | DD: 5.31%
-OPEN LONG | Price: 124.3 | SL: 123.4 | Risk: 0.68%
-CLOSE | PnL: 48.57 | Equity: 9939.01 | DD: 5.31%
-OPEN LONG | Price: 125.99 | SL: 125.88 | Risk: 0.68%
-CLOSE | PnL: 342.88 | Equity: 10281.89 | DD: 5.31%
-Progress: 22.5% | Trades: 43 | Equity: 10281.89
-OPEN SHORT | Price: 124.51 | SL: 125.2 | Risk: 0.75%
-CLOSE | PnL: -76.91 | Equity: 10204.98 | DD: 5.31%
-OPEN SHORT | Price: 125.24 | SL: 125.6 | Risk: 0.75%
-CLOSE | PnL: -76.33 | Equity: 10128.65 | DD: 5.31%
-OPEN LONG | Price: 126.14 | SL: 126.02 | Risk: 0.68%
-CLOSE | PnL: -48.18 | Equity: 10080.47 | DD: 5.31%
-OPEN LONG | Price: 125.98 | SL: 125.88 | Risk: 0.68%
-CLOSE | PnL: 448.21 | Equity: 10528.68 | DD: 5.31%
-OPEN LONG | Price: 126.81 | SL: 126.7 | Risk: 0.75%
-CLOSE | PnL: 193.63 | Equity: 10722.31 | DD: 5.31%
-OPEN LONG | Price: 127.06 | SL: 126.87 | Risk: 0.75%
-CLOSE | PnL: 611.28 | Equity: 11333.59 | DD: 5.31%
-OPEN LONG | Price: 131.19 | SL: 130.76 | Risk: 0.75%
-CLOSE | PnL: 283.19 | Equity: 11616.79 | DD: 5.31%
-OPEN LONG | Price: 132.68 | SL: 131.56 | Risk: 0.97%
-CLOSE | PnL: -26.1 | Equity: 11590.68 | DD: 5.31%
-OPEN LONG | Price: 132.61 | SL: 132.29 | Risk: 0.75%
-CLOSE | PnL: -86.7 | Equity: 11503.99 | DD: 5.31%
-OPEN LONG | Price: 133.02 | SL: 132.02 | Risk: 0.75%
-CLOSE | PnL: -61.1 | Equity: 11442.89 | DD: 5.31%
-OPEN LONG | Price: 130.2 | SL: 129.51 | Risk: 0.75%
-CLOSE | PnL: 125.29 | Equity: 11568.18 | DD: 5.31%
-OPEN LONG | Price: 134.38 | SL: 133.15 | Risk: 0.97%
-CLOSE | PnL: -71.01 | Equity: 11497.17 | DD: 5.31%
-OPEN LONG | Price: 134.37 | SL: 133.6 | Risk: 0.97%
-CLOSE | PnL: -1.45 | Equity: 11495.72 | DD: 5.31%
-OPEN LONG | Price: 134.52 | SL: 134.21 | Risk: 0.97%
-CLOSE | PnL: -111.28 | Equity: 11384.44 | DD: 5.31%
-OPEN LONG | Price: 134.41 | SL: 134.0 | Risk: 0.75%
-CLOSE | PnL: 126.18 | Equity: 11510.62 | DD: 5.31%
-OPEN LONG | Price: 135.02 | SL: 134.23 | Risk: 0.75%
-CLOSE | PnL: -94.82 | Equity: 11415.8 | DD: 5.31%
-OPEN LONG | Price: 136.45 | SL: 134.55 | Risk: 0.97%
-CLOSE | PnL: -63.39 | Equity: 11352.41 | DD: 5.31%
-OPEN LONG | Price: 135.2 | SL: 134.94 | Risk: 0.75%
-CLOSE | PnL: 4.93 | Equity: 11357.34 | DD: 5.31%
-OPEN LONG | Price: 135.49 | SL: 134.72 | Risk: 0.75%
-CLOSE | PnL: 7.72 | Equity: 11365.06 | DD: 5.31%
-OPEN LONG | Price: 134.27 | SL: 134.1 | Risk: 0.75%
-CLOSE | PnL: -71.95 | Equity: 11293.12 | DD: 5.31%
-OPEN LONG | Price: 133.51 | SL: 133.15 | Risk: 0.75%
-CLOSE | PnL: 53.94 | Equity: 11347.05 | DD: 5.31%
-OPEN LONG | Price: 138.0 | SL: 137.18 | Risk: 0.97%
-CLOSE | PnL: 170.95 | Equity: 11518.01 | DD: 5.31%
-OPEN LONG | Price: 138.29 | SL: 137.84 | Risk: 1.06%
-CLOSE | PnL: 107.08 | Equity: 11625.09 | DD: 5.31%
-OPEN LONG | Price: 138.66 | SL: 138.21 | Risk: 1.06%
-CLOSE | PnL: -122.76 | Equity: 11502.33 | DD: 5.31%
-OPEN LONG | Price: 137.62 | SL: 137.22 | Risk: 0.75%
-CLOSE | PnL: 212.87 | Equity: 11715.19 | DD: 5.31%
-OPEN LONG | Price: 138.62 | SL: 138.11 | Risk: 1.06%
-CLOSE | PnL: -123.71 | Equity: 11591.48 | DD: 5.31%
-OPEN LONG | Price: 138.46 | SL: 138.02 | Risk: 0.97%
-CLOSE | PnL: 208.88 | Equity: 11800.36 | DD: 5.31%
-OPEN LONG | Price: 139.23 | SL: 138.24 | Risk: 0.97%
-CLOSE | PnL: -114.23 | Equity: 11686.14 | DD: 5.31%
-OPEN LONG | Price: 139.57 | SL: 137.52 | Risk: 0.97%
-CLOSE | PnL: -24.28 | Equity: 11661.86 | DD: 5.31%
-OPEN LONG | Price: 141.7 | SL: 140.85 | Risk: 0.97%
-CLOSE | PnL: 91.35 | Equity: 11753.21 | DD: 5.31%
-OPEN LONG | Price: 137.33 | SL: 136.08 | Risk: 0.75%
-Progress: 30.0% | Trades: 73 | Equity: 11753.21
-CLOSE | PnL: 112.53 | Equity: 11865.74 | DD: 5.31%
-OPEN LONG | Price: 141.27 | SL: 138.41 | Risk: 0.75%
-CLOSE | PnL: -31.03 | Equity: 11834.7 | DD: 5.31%
-OPEN LONG | Price: 139.6 | SL: 139.13 | Risk: 0.75%
-CLOSE | PnL: -88.52 | Equity: 11746.18 | DD: 5.31%
-OPEN LONG | Price: 137.17 | SL: 136.92 | Risk: 0.75%
-CLOSE | PnL: -87.86 | Equity: 11658.32 | DD: 5.31%
-OPEN LONG | Price: 136.86 | SL: 136.46 | Risk: 0.97%
-CLOSE | PnL: 274.32 | Equity: 11932.64 | DD: 5.31%
-OPEN LONG | Price: 135.59 | SL: 134.62 | Risk: 0.75%
-CLOSE | PnL: 17.48 | Equity: 11950.13 | DD: 5.31%
-OPEN LONG | Price: 135.32 | SL: 134.65 | Risk: 0.68%
-CLOSE | PnL: -81.26 | Equity: 11868.86 | DD: 5.31%
-OPEN LONG | Price: 134.7 | SL: 134.35 | Risk: 0.68%
-CLOSE | PnL: -80.71 | Equity: 11788.16 | DD: 5.31%
-OPEN LONG | Price: 136.96 | SL: 136.55 | Risk: 0.68%
-CLOSE | PnL: 521.35 | Equity: 12309.51 | DD: 5.31%
-OPEN LONG | Price: 138.92 | SL: 137.85 | Risk: 0.68%
-CLOSE | PnL: 129.51 | Equity: 12439.02 | DD: 5.31%
-OPEN LONG | Price: 140.16 | SL: 136.07 | Risk: 0.75%
-CLOSE | PnL: -56.87 | Equity: 12382.14 | DD: 5.31%
-OPEN LONG | Price: 138.39 | SL: 137.25 | Risk: 0.68%
-CLOSE | PnL: -84.2 | Equity: 12297.95 | DD: 5.31%
-OPEN LONG | Price: 136.3 | SL: 135.71 | Risk: 0.68%
-CLOSE | PnL: -83.63 | Equity: 12214.32 | DD: 5.31%
-OPEN LONG | Price: 136.46 | SL: 136.18 | Risk: 0.8%
-CLOSE | PnL: -97.71 | Equity: 12116.61 | DD: 5.31%
-OPEN LONG | Price: 135.97 | SL: 135.79 | Risk: 0.68%
-CLOSE | PnL: 294.07 | Equity: 12410.68 | DD: 5.31%
-OPEN LONG | Price: 136.38 | SL: 136.27 | Risk: 0.68%
-CLOSE | PnL: 76.44 | Equity: 12487.12 | DD: 5.31%
-OPEN LONG | Price: 138.87 | SL: 137.44 | Risk: 0.75%
-Progress: 37.5% | Trades: 89 | Equity: 12487.12
-CLOSE | PnL: 87.91 | Equity: 12575.03 | DD: 5.31%
-OPEN LONG | Price: 142.48 | SL: 141.69 | Risk: 0.97%
-CLOSE | PnL: 156.84 | Equity: 12731.86 | DD: 5.31%
-OPEN LONG | Price: 143.21 | SL: 141.97 | Risk: 0.97%
-CLOSE | PnL: -116.29 | Equity: 12615.57 | DD: 5.31%
-OPEN LONG | Price: 141.61 | SL: 141.09 | Risk: 0.75%
-CLOSE | PnL: 110.28 | Equity: 12725.85 | DD: 5.31%
-OPEN LONG | Price: 143.82 | SL: 142.97 | Risk: 0.97%
-CLOSE | PnL: -55.07 | Equity: 12670.78 | DD: 5.31%
-OPEN LONG | Price: 147.08 | SL: 143.31 | Risk: 0.97%
-CLOSE | PnL: -72.55 | Equity: 12598.23 | DD: 5.31%
-OPEN LONG | Price: 145.53 | SL: 145.11 | Risk: 0.97%
-CLOSE | PnL: 81.35 | Equity: 12679.58 | DD: 5.31%
-OPEN LONG | Price: 145.79 | SL: 145.51 | Risk: 0.97%
-CLOSE | PnL: -121.76 | Equity: 12557.82 | DD: 5.31%
-OPEN LONG | Price: 145.39 | SL: 144.8 | Risk: 0.97%
-CLOSE | PnL: -121.56 | Equity: 12436.26 | DD: 5.31%
-OPEN LONG | Price: 146.9 | SL: 145.44 | Risk: 0.88%
-CLOSE | PnL: -25.49 | Equity: 12410.77 | DD: 5.31%
-OPEN LONG | Price: 145.89 | SL: 145.57 | Risk: 0.68%
-CLOSE | PnL: 169.3 | Equity: 12580.07 | DD: 5.31%
-OPEN LONG | Price: 146.78 | SL: 146.04 | Risk: 0.68%
-CLOSE | PnL: 43.91 | Equity: 12623.98 | DD: 5.31%
-OPEN LONG | Price: 141.92 | SL: 140.94 | Risk: 0.75%
-CLOSE | PnL: 19.27 | Equity: 12643.25 | DD: 5.31%
-OPEN LONG | Price: 141.93 | SL: 141.6 | Risk: 0.75%
-CLOSE | PnL: 52.2 | Equity: 12695.45 | DD: 5.31%
-Progress: 45.0% | Trades: 103 | Equity: 12695.45
-OPEN LONG | Price: 142.76 | SL: 142.29 | Risk: 0.75%
-CLOSE | PnL: 12.12 | Equity: 12707.57 | DD: 5.31%
-OPEN LONG | Price: 142.26 | SL: 142.11 | Risk: 0.75%
-CLOSE | PnL: 26.42 | Equity: 12733.99 | DD: 5.31%
-OPEN LONG | Price: 142.22 | SL: 142.0 | Risk: 0.75%
-CLOSE | PnL: -95.25 | Equity: 12638.73 | DD: 5.31%
-OPEN LONG | Price: 142.37 | SL: 141.9 | Risk: 0.75%
-CLOSE | PnL: -16.09 | Equity: 12622.64 | DD: 5.31%
-OPEN LONG | Price: 142.55 | SL: 141.97 | Risk: 0.75%
-CLOSE | PnL: -94.42 | Equity: 12528.23 | DD: 5.31%
-OPEN LONG | Price: 141.93 | SL: 141.71 | Risk: 0.68%
-CLOSE | PnL: 77.45 | Equity: 12605.67 | DD: 5.31%
-OPEN LONG | Price: 142.35 | SL: 141.83 | Risk: 0.75%
-CLOSE | PnL: 79.78 | Equity: 12685.46 | DD: 5.31%
-OPEN SHORT | Price: 133.4 | SL: 133.8 | Risk: 0.97%
-CLOSE | PnL: 175.75 | Equity: 12861.21 | DD: 5.31%
-OPEN SHORT | Price: 133.4 | SL: 133.52 | Risk: 0.75%
-CLOSE | PnL: -57.85 | Equity: 12803.36 | DD: 5.31%
-OPEN SHORT | Price: 133.61 | SL: 133.98 | Risk: 0.68%
-CLOSE | PnL: -25.88 | Equity: 12777.48 | DD: 5.31%
-OPEN SHORT | Price: 133.58 | SL: 133.77 | Risk: 0.68%
-CLOSE | PnL: -86.89 | Equity: 12690.59 | DD: 5.31%
-OPEN SHORT | Price: 133.63 | SL: 134.02 | Risk: 0.68%
-CLOSE | PnL: -4.43 | Equity: 12686.17 | DD: 5.31%
-OPEN SHORT | Price: 133.96 | SL: 134.09 | Risk: 0.68%
-CLOSE | PnL: -61.56 | Equity: 12624.61 | DD: 5.31%
-OPEN SHORT | Price: 133.9 | SL: 134.4 | Risk: 0.68%
-CLOSE | PnL: -85.85 | Equity: 12538.76 | DD: 5.31%
-OPEN SHORT | Price: 134.79 | SL: 135.12 | Risk: 0.68%
-CLOSE | PnL: 420.37 | Equity: 12959.13 | DD: 5.31%
-OPEN SHORT | Price: 133.37 | SL: 133.85 | Risk: 0.68%
-CLOSE | PnL: -88.12 | Equity: 12871.01 | DD: 5.31%
-OPEN SHORT | Price: 133.94 | SL: 134.22 | Risk: 0.68%
-CLOSE | PnL: 81.23 | Equity: 12952.23 | DD: 5.31%
-OPEN SHORT | Price: 134.38 | SL: 134.62 | Risk: 0.68%
-CLOSE | PnL: 571.77 | Equity: 13524.0 | DD: 5.31%
-OPEN SHORT | Price: 130.03 | SL: 131.41 | Risk: 0.97%
-CLOSE | PnL: 93.47 | Equity: 13617.48 | DD: 5.31%
-OPEN SHORT | Price: 128.69 | SL: 130.41 | Risk: 0.97%
-CLOSE | PnL: -40.62 | Equity: 13576.86 | DD: 5.31%
-OPEN SHORT | Price: 128.37 | SL: 129.07 | Risk: 0.97%
-CLOSE | PnL: -131.42 | Equity: 13445.43 | DD: 5.31%
-OPEN SHORT | Price: 127.34 | SL: 128.52 | Risk: 0.96%
-CLOSE | PnL: -55.79 | Equity: 13389.65 | DD: 5.31%
-OPEN SHORT | Price: 127.01 | SL: 128.02 | Risk: 0.75%
-CLOSE | PnL: 189.15 | Equity: 13578.8 | DD: 5.31%
-OPEN SHORT | Price: 126.27 | SL: 127.44 | Risk: 0.97%
-CLOSE | PnL: -122.46 | Equity: 13456.34 | DD: 5.31%
-OPEN SHORT | Price: 130.55 | SL: 131.0 | Risk: 0.75%
-CLOSE | PnL: -100.65 | Equity: 13355.69 | DD: 5.31%
-OPEN SHORT | Price: 130.1 | SL: 130.52 | Risk: 0.75%
-CLOSE | PnL: 60.93 | Equity: 13416.62 | DD: 5.31%
-OPEN SHORT | Price: 130.08 | SL: 130.37 | Risk: 0.75%
-CLOSE | PnL: 50.13 | Equity: 13466.75 | DD: 5.31%
-Progress: 52.5% | Trades: 130 | Equity: 13466.75
-OPEN SHORT | Price: 129.3 | SL: 130.91 | Risk: 0.75%
-CLOSE | PnL: 118.0 | Equity: 13584.75 | DD: 5.31%
-OPEN SHORT | Price: 127.78 | SL: 128.3 | Risk: 0.97%
-CLOSE | PnL: 58.34 | Equity: 13643.09 | DD: 5.31%
-OPEN SHORT | Price: 129.24 | SL: 129.57 | Risk: 0.97%
-CLOSE | PnL: -132.07 | Equity: 13511.03 | DD: 5.31%
-OPEN SHORT | Price: 129.31 | SL: 129.7 | Risk: 0.88%
-CLOSE | PnL: 215.93 | Equity: 13726.96 | DD: 5.31%
-OPEN SHORT | Price: 128.34 | SL: 128.43 | Risk: 0.75%
-CLOSE | PnL: -48.13 | Equity: 13678.83 | DD: 5.31%
-OPEN SHORT | Price: 127.57 | SL: 128.11 | Risk: 0.68%
-CLOSE | PnL: -93.02 | Equity: 13585.81 | DD: 5.31%
-OPEN SHORT | Price: 129.42 | SL: 130.08 | Risk: 0.68%
-CLOSE | PnL: 95.31 | Equity: 13681.12 | DD: 5.31%
-OPEN SHORT | Price: 126.46 | SL: 127.09 | Risk: 0.75%
-CLOSE | PnL: -58.48 | Equity: 13622.64 | DD: 5.31%
-OPEN SHORT | Price: 126.49 | SL: 126.77 | Risk: 0.75%
-CLOSE | PnL: 55.32 | Equity: 13677.96 | DD: 5.31%
-OPEN SHORT | Price: 126.71 | SL: 126.85 | Risk: 0.75%
-CLOSE | PnL: -75.56 | Equity: 13602.39 | DD: 5.31%
-OPEN SHORT | Price: 127.0 | SL: 127.15 | Risk: 0.68%
-CLOSE | PnL: 81.74 | Equity: 13684.14 | DD: 5.31%
-OPEN SHORT | Price: 125.98 | SL: 126.98 | Risk: 0.68%
-CLOSE | PnL: 372.76 | Equity: 14056.9 | DD: 5.31%
-OPEN SHORT | Price: 122.2 | SL: 122.88 | Risk: 0.97%
-CLOSE | PnL: 175.13 | Equity: 14232.02 | DD: 5.31%
-OPEN SHORT | Price: 121.53 | SL: 122.2 | Risk: 0.97%
-CLOSE | PnL: 372.65 | Equity: 14604.67 | DD: 5.31%
-OPEN SHORT | Price: 119.88 | SL: 121.75 | Risk: 0.97%
-CLOSE | PnL: 121.42 | Equity: 14726.09 | DD: 5.31%
-OPEN SHORT | Price: 117.49 | SL: 120.82 | Risk: 0.97%
-CLOSE | PnL: -55.22 | Equity: 14670.87 | DD: 5.31%
-Progress: 60.0% | Trades: 146 | Equity: 14670.87
-OPEN SHORT | Price: 126.95 | SL: 127.19 | Risk: 0.75%
-CLOSE | PnL: -109.74 | Equity: 14561.13 | DD: 5.31%
-OPEN SHORT | Price: 127.33 | SL: 127.47 | Risk: 0.75%
-CLOSE | PnL: 6.56 | Equity: 14567.69 | DD: 5.31%
-OPEN SHORT | Price: 126.32 | SL: 126.99 | Risk: 0.75%
-CLOSE | PnL: 64.37 | Equity: 14632.06 | DD: 5.31%
-OPEN SHORT | Price: 125.44 | SL: 126.62 | Risk: 0.75%
-CLOSE | PnL: -15.77 | Equity: 14616.29 | DD: 5.31%
-OPEN SHORT | Price: 122.45 | SL: 123.13 | Risk: 0.75%
-CLOSE | PnL: 685.44 | Equity: 15301.73 | DD: 5.31%
-OPEN SHORT | Price: 118.45 | SL: 121.61 | Risk: 0.97%
-CLOSE | PnL: 70.31 | Equity: 15372.04 | DD: 5.31%
-OPEN SHORT | Price: 116.39 | SL: 117.86 | Risk: 0.75%
-CLOSE | PnL: 166.51 | Equity: 15538.55 | DD: 5.31%
-OPEN SHORT | Price: 114.71 | SL: 117.85 | Risk: 0.97%
-CLOSE | PnL: -30.66 | Equity: 15507.89 | DD: 5.31%
-OPEN SHORT | Price: 115.6 | SL: 115.95 | Risk: 0.75%
-CLOSE | PnL: -116.0 | Equity: 15391.89 | DD: 5.31%
-OPEN SHORT | Price: 114.46 | SL: 117.16 | Risk: 0.75%
-CLOSE | PnL: -115.13 | Equity: 15276.76 | DD: 5.31%
-OPEN SHORT | Price: 111.01 | SL: 114.41 | Risk: 0.97%
-CLOSE | PnL: 143.7 | Equity: 15420.45 | DD: 5.31%
-OPEN SHORT | Price: 108.39 | SL: 109.79 | Risk: 0.97%
-CLOSE | PnL: 495.22 | Equity: 15915.67 | DD: 5.31%
-OPEN SHORT | Price: 103.78 | SL: 108.16 | Risk: 0.97%
-CLOSE | PnL: 4.57 | Equity: 15920.25 | DD: 5.31%
-OPEN SHORT | Price: 104.99 | SL: 105.24 | Risk: 0.75%
-CLOSE | PnL: -119.08 | Equity: 15801.16 | DD: 5.31%
-OPEN SHORT | Price: 105.52 | SL: 105.82 | Risk: 0.75%
-CLOSE | PnL: 105.46 | Equity: 15906.62 | DD: 5.31%
-OPEN SHORT | Price: 104.95 | SL: 105.41 | Risk: 0.75%
-CLOSE | PnL: 141.0 | Equity: 16047.63 | DD: 5.31%
-OPEN SHORT | Price: 104.32 | SL: 106.22 | Risk: 0.75%
-CLOSE | PnL: 131.66 | Equity: 16179.28 | DD: 5.31%
-Progress: 67.5% | Trades: 163 | Equity: 16179.28
-OPEN SHORT | Price: 100.49 | SL: 102.26 | Risk: 0.97%
-CLOSE | PnL: -156.62 | Equity: 16022.67 | DD: 5.31%
-OPEN SHORT | Price: 101.26 | SL: 102.69 | Risk: 0.75%
-CLOSE | PnL: 355.51 | Equity: 16378.17 | DD: 5.31%
-OPEN SHORT | Price: 98.6 | SL: 99.3 | Risk: 0.97%
-CLOSE | PnL: -158.54 | Equity: 16219.63 | DD: 5.31%
-OPEN SHORT | Price: 99.45 | SL: 99.92 | Risk: 0.97%
-CLOSE | PnL: 100.99 | Equity: 16320.63 | DD: 5.31%
-OPEN SHORT | Price: 100.64 | SL: 101.33 | Risk: 0.75%
-CLOSE | PnL: -122.08 | Equity: 16198.55 | DD: 5.31%
-OPEN SHORT | Price: 104.36 | SL: 104.97 | Risk: 0.75%
-CLOSE | PnL: 92.75 | Equity: 16291.3 | DD: 5.31%
-OPEN SHORT | Price: 104.5 | SL: 104.68 | Risk: 0.75%
-CLOSE | PnL: -121.86 | Equity: 16169.44 | DD: 5.31%
-OPEN SHORT | Price: 103.04 | SL: 103.43 | Risk: 0.75%
-CLOSE | PnL: 39.32 | Equity: 16208.76 | DD: 5.31%
-OPEN SHORT | Price: 102.98 | SL: 103.32 | Risk: 0.97%
-CLOSE | PnL: 83.31 | Equity: 16292.07 | DD: 5.31%
-OPEN SHORT | Price: 100.96 | SL: 102.53 | Risk: 0.97%
-CLOSE | PnL: 189.8 | Equity: 16481.87 | DD: 5.31%
-OPEN SHORT | Price: 98.62 | SL: 100.43 | Risk: 0.97%
-CLOSE | PnL: 119.99 | Equity: 16601.86 | DD: 5.31%
-OPEN SHORT | Price: 99.03 | SL: 99.92 | Risk: 0.97%
-CLOSE | PnL: -160.71 | Equity: 16441.15 | DD: 5.31%
-OPEN SHORT | Price: 97.43 | SL: 98.29 | Risk: 0.97%
-CLOSE | PnL: -159.15 | Equity: 16282.0 | DD: 5.31%
-OPEN SHORT | Price: 99.08 | SL: 99.45 | Risk: 0.75%
-CLOSE | PnL: -121.79 | Equity: 16160.21 | DD: 5.31%
-OPEN SHORT | Price: 97.51 | SL: 98.38 | Risk: 1.06%
-CLOSE | PnL: 126.17 | Equity: 16286.38 | DD: 5.31%
-OPEN SHORT | Price: 97.6 | SL: 98.24 | Risk: 0.97%
-CLOSE | PnL: -157.65 | Equity: 16128.73 | DD: 5.31%
-OPEN SHORT | Price: 97.13 | SL: 98.15 | Risk: 0.97%
-CLOSE | PnL: 248.32 | Equity: 16377.05 | DD: 5.31%
-OPEN SHORT | Price: 96.2 | SL: 97.04 | Risk: 0.97%
-CLOSE | PnL: 285.75 | Equity: 16662.8 | DD: 5.31%
-OPEN SHORT | Price: 94.29 | SL: 96.28 | Risk: 0.97%
-CLOSE | PnL: 131.35 | Equity: 16794.15 | DD: 5.31%
-OPEN SHORT | Price: 90.87 | SL: 93.04 | Risk: 0.97%
-CLOSE | PnL: -200.03 | Equity: 16594.13 | DD: 5.31%
-OPEN SHORT | Price: 90.79 | SL: 92.46 | Risk: 0.88%
-CLOSE | PnL: -146.03 | Equity: 16448.1 | DD: 5.31%
-OPEN SHORT | Price: 91.86 | SL: 92.75 | Risk: 0.68%
-CLOSE | PnL: 114.45 | Equity: 16562.55 | DD: 5.31%
-OPEN SHORT | Price: 91.2 | SL: 91.62 | Risk: 0.88%
-CLOSE | PnL: 49.67 | Equity: 16612.22 | DD: 5.31%
-OPEN SHORT | Price: 88.82 | SL: 90.82 | Risk: 0.97%
-CLOSE | PnL: -182.52 | Equity: 16429.71 | DD: 5.31%
-OPEN SHORT | Price: 84.54 | SL: 87.56 | Risk: 0.88%
-CLOSE | PnL: 119.47 | Equity: 16549.18 | DD: 5.31%
-OPEN SHORT | Price: 82.38 | SL: 83.25 | Risk: 0.88%
-CLOSE | PnL: 518.2 | Equity: 17067.38 | DD: 5.31%
-OPEN SHORT | Price: 78.09 | SL: 82.1 | Risk: 0.88%
-CLOSE | PnL: 349.33 | Equity: 17416.71 | DD: 5.31%
-OPEN SHORT | Price: 79.03 | SL: 80.12 | Risk: 0.75%
-CLOSE | PnL: -130.28 | Equity: 17286.44 | DD: 5.31%
-OPEN SHORT | Price: 86.3 | SL: 86.72 | Risk: 0.97%
-CLOSE | PnL: 66.48 | Equity: 17352.92 | DD: 5.31%
-OPEN SHORT | Price: 86.29 | SL: 86.67 | Risk: 0.96%
-CLOSE | PnL: -166.59 | Equity: 17186.33 | DD: 5.31%
-Progress: 75.0% | Trades: 193 | Equity: 17186.33
-OPEN SHORT | Price: 87.92 | SL: 88.55 | Risk: 0.88%
-CLOSE | PnL: 670.2 | Equity: 17856.53 | DD: 5.31%
-OPEN SHORT | Price: 85.54 | SL: 86.61 | Risk: 0.97%
-CLOSE | PnL: -240.7 | Equity: 17615.83 | DD: 5.31%
-OPEN SHORT | Price: 88.38 | SL: 88.78 | Risk: 0.68%
-CLOSE | PnL: 181.34 | Equity: 17797.17 | DD: 5.31%
-OPEN SHORT | Price: 87.71 | SL: 88.58 | Risk: 0.75%
-CLOSE | PnL: 132.66 | Equity: 17929.83 | DD: 5.31%
-OPEN SHORT | Price: 87.97 | SL: 88.23 | Risk: 0.75%
-CLOSE | PnL: -134.12 | Equity: 17795.71 | DD: 5.31%
-OPEN SHORT | Price: 87.89 | SL: 88.55 | Risk: 0.75%
-CLOSE | PnL: 209.75 | Equity: 18005.47 | DD: 5.31%
-OPEN SHORT | Price: 86.45 | SL: 89.09 | Risk: 0.75%
-CLOSE | PnL: -46.93 | Equity: 17958.53 | DD: 5.31%
-OPEN SHORT | Price: 85.86 | SL: 87.92 | Risk: 0.75%
-CLOSE | PnL: -114.12 | Equity: 17844.42 | DD: 5.31%
-OPEN SHORT | Price: 87.5 | SL: 87.89 | Risk: 0.75%
-CLOSE | PnL: 132.45 | Equity: 17976.87 | DD: 5.31%
-OPEN SHORT | Price: 86.91 | SL: 87.18 | Risk: 0.75%
-CLOSE | PnL: -134.47 | Equity: 17842.4 | DD: 5.31%
-OPEN SHORT | Price: 87.81 | SL: 88.17 | Risk: 0.68%
-CLOSE | PnL: -121.33 | Equity: 17721.07 | DD: 5.31%
-OPEN SHORT | Price: 85.89 | SL: 86.54 | Risk: 0.68%
-CLOSE | PnL: 250.31 | Equity: 17971.38 | DD: 5.31%
-OPEN SHORT | Price: 82.92 | SL: 83.48 | Risk: 0.96%
-CLOSE | PnL: 256.27 | Equity: 18227.65 | DD: 5.31%
-OPEN SHORT | Price: 82.27 | SL: 82.9 | Risk: 0.97%
-CLOSE | PnL: -170.84 | Equity: 18056.81 | DD: 5.31%
-OPEN SHORT | Price: 83.29 | SL: 83.81 | Risk: 0.75%
-CLOSE | PnL: 323.42 | Equity: 18380.23 | DD: 5.31%
-OPEN SHORT | Price: 82.29 | SL: 82.98 | Risk: 0.97%
-CLOSE | PnL: 347.32 | Equity: 18727.56 | DD: 5.31%
-OPEN SHORT | Price: 81.33 | SL: 81.99 | Risk: 0.97%
-CLOSE | PnL: 132.77 | Equity: 18860.33 | DD: 5.31%
-OPEN SHORT | Price: 80.99 | SL: 81.22 | Risk: 0.97%
-CLOSE | PnL: -182.57 | Equity: 18677.76 | DD: 5.31%
-OPEN SHORT | Price: 80.95 | SL: 81.31 | Risk: 0.97%
-CLOSE | PnL: 151.92 | Equity: 18829.68 | DD: 5.31%
-OPEN SHORT | Price: 80.85 | SL: 81.01 | Risk: 0.97%
-CLOSE | PnL: -182.27 | Equity: 18647.41 | DD: 5.31%
-OPEN SHORT | Price: 79.91 | SL: 83.18 | Risk: 0.75%
-CLOSE | PnL: 7.25 | Equity: 18654.66 | DD: 5.31%
-OPEN SHORT | Price: 79.57 | SL: 80.01 | Risk: 0.75%
-CLOSE | PnL: 71.99 | Equity: 18726.65 | DD: 5.31%
-OPEN SHORT | Price: 80.03 | SL: 80.24 | Risk: 0.75%
-CLOSE | PnL: -140.08 | Equity: 18586.58 | DD: 5.31%
-OPEN SHORT | Price: 80.56 | SL: 80.91 | Risk: 0.97%
-CLOSE | PnL: 704.8 | Equity: 19291.38 | DD: 5.31%
-OPEN SHORT | Price: 79.26 | SL: 79.67 | Risk: 0.97%
-CLOSE | PnL: -186.74 | Equity: 19104.64 | DD: 5.31%
-Progress: 82.5% | Trades: 218 | Equity: 19104.64
-OPEN SHORT | Price: 80.13 | SL: 81.5 | Risk: 0.75%
-CLOSE | PnL: 144.04 | Equity: 19248.68 | DD: 5.31%
-OPEN SHORT | Price: 78.98 | SL: 80.31 | Risk: 0.97%
-CLOSE | PnL: 184.33 | Equity: 19433.0 | DD: 5.31%
-OPEN SHORT | Price: 77.76 | SL: 78.45 | Risk: 1.06%
-CLOSE | PnL: 219.18 | Equity: 19652.18 | DD: 5.31%
-OPEN SHORT | Price: 77.13 | SL: 77.37 | Risk: 0.97%
-CLOSE | PnL: -190.23 | Equity: 19461.95 | DD: 5.31%
-OPEN SHORT | Price: 78.19 | SL: 78.69 | Risk: 0.97%
-CLOSE | PnL: -188.39 | Equity: 19273.56 | DD: 5.31%
-OPEN SHORT | Price: 78.42 | SL: 78.65 | Risk: 0.97%
-CLOSE | PnL: -186.57 | Equity: 19086.99 | DD: 5.31%
-OPEN SHORT | Price: 86.45 | SL: 86.76 | Risk: 0.88%
-CLOSE | PnL: -167.97 | Equity: 18919.02 | DD: 5.31%
-OPEN SHORT | Price: 86.74 | SL: 87.12 | Risk: 0.88%
-CLOSE | PnL: -166.49 | Equity: 18752.54 | DD: 5.31%
-OPEN SHORT | Price: 86.14 | SL: 86.97 | Risk: 0.68%
-CLOSE | PnL: -127.52 | Equity: 18625.02 | DD: 5.31%
-OPEN SHORT | Price: 88.03 | SL: 88.19 | Risk: 0.88%
-CLOSE | PnL: 15.66 | Equity: 18640.68 | DD: 5.31%
-OPEN SHORT | Price: 88.08 | SL: 88.23 | Risk: 0.88%
-CLOSE | PnL: 141.34 | Equity: 18782.02 | DD: 5.31%
-OPEN SHORT | Price: 88.22 | SL: 88.37 | Risk: 0.68%
-CLOSE | PnL: 493.48 | Equity: 19275.5 | DD: 5.31%
-OPEN SHORT | Price: 88.09 | SL: 88.3 | Risk: 0.68%
-CLOSE | PnL: -131.07 | Equity: 19144.42 | DD: 5.31%
-OPEN SHORT | Price: 88.23 | SL: 88.39 | Risk: 0.68%
-CLOSE | PnL: -130.18 | Equity: 19014.24 | DD: 5.31%
-OPEN SHORT | Price: 88.39 | SL: 88.68 | Risk: 0.68%
-CLOSE | PnL: 179.42 | Equity: 19193.66 | DD: 5.31%
-OPEN SHORT | Price: 87.99 | SL: 88.23 | Risk: 0.68%
-CLOSE | PnL: 109.66 | Equity: 19303.32 | DD: 5.31%
-OPEN SHORT | Price: 90.63 | SL: 90.98 | Risk: 0.97%
-CLOSE | PnL: -186.86 | Equity: 19116.47 | DD: 5.31%
-OPEN LONG | Price: 89.49 | SL: 89.32 | Risk: 0.68%
-CLOSE | PnL: -129.99 | Equity: 18986.47 | DD: 5.31%
-OPEN LONG | Price: 89.29 | SL: 89.04 | Risk: 0.68%
-CLOSE | PnL: 71.33 | Equity: 19057.81 | DD: 5.31%
-OPEN LONG | Price: 87.43 | SL: 87.17 | Risk: 0.68%
-CLOSE | PnL: -129.59 | Equity: 18928.21 | DD: 5.31%
-OPEN LONG | Price: 87.05 | SL: 86.71 | Risk: 0.68%
-CLOSE | PnL: 111.34 | Equity: 19039.55 | DD: 5.31%
-OPEN LONG | Price: 86.42 | SL: 85.03 | Risk: 0.68%
-CLOSE | PnL: -70.79 | Equity: 18968.76 | DD: 5.31%
-OPEN SHORT | Price: 86.14 | SL: 86.33 | Risk: 0.68%
-CLOSE | PnL: -128.99 | Equity: 18839.77 | DD: 5.31%
-OPEN SHORT | Price: 86.65 | SL: 86.89 | Risk: 0.68%
-CLOSE | PnL: 1255.94 | Equity: 20095.71 | DD: 5.31%
-Progress: 90.0% | Trades: 242 | Equity: 20095.71
-OPEN SHORT | Price: 83.57 | SL: 85.42 | Risk: 0.68%
-CLOSE | PnL: -136.65 | Equity: 19959.06 | DD: 5.31%
-OPEN SHORT | Price: 81.41 | SL: 82.23 | Risk: 0.88%
-CLOSE | PnL: 55.69 | Equity: 20014.75 | DD: 5.31%
-OPEN SHORT | Price: 81.07 | SL: 81.62 | Risk: 0.88%
-CLOSE | PnL: 193.11 | Equity: 20207.87 | DD: 5.31%
-OPEN SHORT | Price: 80.43 | SL: 81.21 | Risk: 0.88%
-CLOSE | PnL: 2.28 | Equity: 20210.15 | DD: 5.31%
-OPEN SHORT | Price: 83.42 | SL: 84.75 | Risk: 0.75%
-CLOSE | PnL: 57.97 | Equity: 20268.12 | DD: 5.31%
-OPEN SHORT | Price: 84.09 | SL: 84.74 | Risk: 0.68%
-CLOSE | PnL: -80.57 | Equity: 20187.54 | DD: 5.31%
-OPEN SHORT | Price: 86.07 | SL: 86.65 | Risk: 0.68%
-CLOSE | PnL: 150.76 | Equity: 20338.3 | DD: 5.31%
-OPEN LONG | Price: 85.23 | SL: 84.65 | Risk: 0.68%
-CLOSE | PnL: -40.54 | Equity: 20297.76 | DD: 5.31%
-Progress: 97.5% | Trades: 250 | Equity: 20297.76
-OPEN SHORT | Price: 78.35 | SL: 78.82 | Risk: 0.88%
-CLOSE | PnL: 296.16 | Equity: 20593.93 | DD: 5.31%
-OPEN SHORT | Price: 77.81 | SL: 78.24 | Risk: 0.96%
-CLOSE | PnL: 250.51 | Equity: 20844.44 | DD: 5.31%
-OPEN SHORT | Price: 77.3 | SL: 77.67 | Risk: 0.96%
-CLOSE | PnL: -200.11 | Equity: 20644.33 | DD: 5.31%
-OPEN SHORT | Price: 77.72 | SL: 77.86 | Risk: 0.88%
-CLOSE | PnL: -181.67 | Equity: 20462.66 | DD: 5.31%
-OPEN SHORT | Price: 77.86 | SL: 77.97 | Risk: 0.88%
-CLOSE | PnL: 159.1 | Equity: 20621.76 | DD: 5.31%
-OPEN SHORT | Price: 80.13 | SL: 80.33 | Risk: 0.97%
-CLOSE | PnL: -199.62 | Equity: 20422.14 | DD: 5.31%
-OPEN SHORT | Price: 80.72 | SL: 80.92 | Risk: 0.97%
-CLOSE | PnL: 79.43 | Equity: 20501.56 | DD: 5.31%
-OPEN SHORT | Price: 80.03 | SL: 80.94 | Risk: 0.75%
-CLOSE | PnL: 161.33 | Equity: 20662.89 | DD: 5.31%
-OPEN SHORT | Price: 79.11 | SL: 79.78 | Risk: 0.97%
-CLOSE | PnL: 381.73 | Equity: 21044.62 | DD: 5.31%
-OPEN SHORT | Price: 78.26 | SL: 78.78 | Risk: 0.97%
-CLOSE | PnL: -203.71 | Equity: 20840.91 | DD: 5.31%
-OPEN SHORT | Price: 78.99 | SL: 79.25 | Risk: 0.97%
-CLOSE | PnL: 157.54 | Equity: 20998.45 | DD: 5.31%
-OPEN SHORT | Price: 78.28 | SL: 79.2 | Risk: 0.97%
-CLOSE | PnL: -22.09 | Equity: 20976.35 | DD: 5.31%
-OPEN SHORT | Price: 76.49 | SL: 77.29 | Risk: 0.97%
-CLOSE | PnL: -121.83 | Equity: 20854.52 | DD: 5.31%
-
-Backtest Finished.
+from v30.elite_reversal_engine import EliteReversalEngine
 
 
-==============================
-V31 INSTITUTIONAL RESULTS
-==============================
-trades: 263
-winrate: 0.4981
-expectancy: 41.27
-profit_factor: 1.85
-final_balance: 20854.52
-return_pct: 108.55
-max_drawdown_pct: 5.31
+# =====================================================
+# GLOBALS / ENGINES
+# =====================================================
 
-Full report saved to: C:\Users\Win10_Game_OS\Desktop\Bot\report_SOLUSDT_v31.json
+strategy_selector = StrategySelector()
+asset_engine = AssetProfileEngine()
+reversal_engine = EliteReversalEngine()
 
-C:\Users\Win10_Game_OS\Desktop\Bot>
+SYMBOL_COOLDOWN = 300
+_last_signal_ts: Dict[str, float] = {}
+
+_BTC_CTX_CACHE = {
+    "ts": 0.0,
+    "factor": 1.0,
+    "regime": "neutral",
+}
+
+DEBUG_ROUTER = True
+
+SCREENER_MODE = "balanced"  # conservative | balanced | aggressive
+
+MODE_PROFILES = {
+    "conservative": {
+        "min_score_shift": +5,
+        "btc_trend_boost": 1.02,
+        "btc_ranging_boost": 1.00,
+        "btc_high_vol_factor": 0.85,
+        "impulse_multiplier": 0.9,
+        "memory_boost": 0.9,
+        "reversal_bonus": 0.95,
+        "elite_threshold": 88,
+    },
+    "balanced": {
+        "min_score_shift": 0,
+        "btc_trend_boost": 1.05,
+        "btc_ranging_boost": 1.07,
+        "btc_high_vol_factor": 0.95,
+        "impulse_multiplier": 1.05,
+        "memory_boost": 1.05,
+        "reversal_bonus": 1.05,
+        "elite_threshold": 85,
+    },
+    "aggressive": {
+        "min_score_shift": -8,
+        "btc_trend_boost": 1.10,
+        "btc_ranging_boost": 1.10,
+        "btc_high_vol_factor": 1.00,
+        "impulse_multiplier": 1.15,
+        "memory_boost": 1.10,
+        "reversal_bonus": 1.15,
+        "elite_threshold": 80,
+    }
+}
 
 
+def get_mode_profile():
+    return MODE_PROFILES.get(SCREENER_MODE, MODE_PROFILES["balanced"])
 
+
+def set_screener_mode(mode: str):
+    global SCREENER_MODE
+    if mode in MODE_PROFILES:
+        SCREENER_MODE = mode
+
+
+def symbol_on_cooldown(symbol: str) -> bool:
+    ts = _last_signal_ts.get(symbol)
+    if ts is None:
+        return False
+    return (time.time() - ts) < SYMBOL_COOLDOWN
+
+
+def mark_symbol_signal(symbol: str):
+    _last_signal_ts[symbol] = time.time()
+
+
+def log_signal(s: dict):
+    with open("signals.log", "a", encoding="utf-8") as f:
+        f.write(
+            f"{time.strftime('%Y-%m-%d %H:%M:%S')} | "
+            f"{s['type']} | {s['symbol']} | price={s['price']:.4f} | "
+            f"rating={s['rating']} | trend={s['trend_score']} | risk={s['risk_score']}\n"
+        )
+
+
+def log_blocked_signal(symbol: str, reason: str, details: str = ""):
+    with open("blocked_signals.log", "a", encoding="utf-8") as f:
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        f.write(f"{timestamp} | {symbol} | Blocked by: {reason}")
+        if details:
+            f.write(f" | {details}")
+        f.write("\n")
+
+
+def log_error(e: Exception):
+    with open("errors.log", "a", encoding="utf-8") as f:
+        f.write(
+            f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {repr(e)}\n"
+        )
+        f.write(traceback.format_exc() + "\n")
+
+
+def infer_direction_side(signal_type: str) -> str:
+    s = signal_type.lower()
+    if "dump → pump" in s or "bull" in s or "long" in s:
+        return "bullish"
+    if "pump → dump" in s or "bear" in s or "short" in s:
+        return "bearish"
+    return "neutral"
+
+
+def apply_reversal_filters(signal_type, closes, highs, lows, volumes, delta_status):
+    if len(closes) < 5:
+        return 0
+
+    c0, c1, c2 = closes[0], closes[1], closes[2]
+    h0, h1 = highs[0], highs[1]
+    l0, l1 = lows[0], lows[1]
+    v0, v1 = volumes[0], volumes[1]
+
+    adj = 0
+
+    is_bullish = any(x in signal_type for x in ["Dump → Pump", "PUMP"])
+    is_bearish = any(x in signal_type for x in ["Pump → Dump", "DUMP"])
+
+    if is_bullish:
+        if c0 > c1 and (c0 - c1) / max(c1, 1e-7) * 100 > 0.2:
+            adj += 7
+        if c0 < c1 and (c1 - c0) / max(c1, 1e-7) * 100 > 0.2:
+            adj -= 5
+
+    if is_bearish:
+        if c0 < c1 and (c1 - c0) / max(c1, 1e-7) * 100 > 0.2:
+            adj += 7
+        if c0 > c1 and (c0 - c1) / max(c1, 1e-7) * 100 > 0.2:
+            adj -= 5
+
+    if is_bearish and h0 > h1:
+        diff = (h0 - h1) / max(h1, 1e-7) * 100
+        if 0.1 < diff < 0.4 and v0 < v1:
+            adj += 5
+
+    if is_bullish and l0 < l1:
+        diff = (l1 - l0) / max(l1, 1e-7) * 100
+        if 0.1 < diff < 0.4 and v0 < v1:
+            adj += 5
+
+    if is_bullish:
+        if delta_status == "bullish":
+            adj += 3
+        elif delta_status == "bearish":
+            adj -= 3
+
+    if is_bearish:
+        if delta_status == "bearish":
+            adj += 3
+        elif delta_status == "bullish":
+            adj -= 3
+
+    if is_bullish:
+        if c2 > c1 and c0 > c1:
+            diff = abs(c1 - c2) / max(c2, 1e-7) * 100
+            if diff < 0.6:
+                adj += 5
+
+    if is_bearish:
+        if c2 < c1 and c0 < c1:
+            diff = abs(c1 - c2) / max(c2, 1e-7) * 100
+            if diff < 0.6:
+                adj += 5
+
+    return adj
+
+
+def generate_candle_chart(klines, symbol: str, timeframe_label: str = "15m"):
+    if not klines:
+        return None
+
+    df = pd.DataFrame({
+        "Open":   [float(c[1]) for c in klines],
+        "High":   [float(c[2]) for c in klines],
+        "Low":    [float(c[3]) for c in klines],
+        "Close":  [float(c[4]) for c in klines],
+        "Volume": [float(c[5]) for c in klines],
+    })
+
+    df.index = pd.to_datetime([int(c[0]) for c in klines], unit="ms")
+    df = df.iloc[::-1]
+
+    mc = mpf.make_marketcolors(up='green', down='red', inherit=True)
+    style = mpf.make_mpf_style(marketcolors=mc)
+
+    buf = BytesIO()
+    mpf.plot(df, type="candle", volume=True, style=style,
+             title=f"{symbol} — {timeframe_label}", savefig=buf)
+    buf.seek(0)
+    return buf
+
+
+def compute_htf_trend_from_klines(klines):
+    if not klines or len(klines) < 20:
+        return 0
+
+    try:
+        closes = [float(c[4]) for c in klines][::-1]
+
+        ema5 = ema(closes, 5)
+        ema20 = ema(closes, 20)
+
+        if not ema5 or not ema20 or len(ema5) < 1 or len(ema20) < 1:
+            return 0
+
+        diff = ema5[-1] - ema20[-1]
+        latest = closes[-1]
+
+        if latest <= 0:
+            return 0
+
+        return round(diff / latest * 100, 4)
+
+    except Exception as e:
+        log_error(e)
+        return 0
+
+
+def ema(values, period: int):
+    if not values or period <= 1 or len(values) < period:
+        return values[:]
+    k = 2 / (period + 1)
+    ema_vals = []
+    prev = sum(values[:period]) / period
+    ema_vals.extend(values[:period - 1])
+    ema_vals.append(prev)
+    for v in values[period:]:
+        prev = v * k + prev * (1 - k)
+        ema_vals.append(prev)
+    return ema_vals
+
+
+def compute_atr_from_klines(klines, period: int = 14) -> float:
+    if not klines or len(klines) < period + 1:
+        return 0.0
+
+    highs = [float(c[2]) for c in klines][::-1]
+    lows = [float(c[3]) for c in klines][::-1]
+    closes = [float(c[4]) for c in klines][::-1]
+
+    trs = []
+    for i in range(1, len(closes)):
+        high = highs[i]
+        low = lows[i]
+        prev_close = closes[i - 1]
+        tr = max(
+            high - low,
+            abs(high - prev_close),
+            abs(low - prev_close),
+        )
+        trs.append(tr)
+
+    if len(trs) < period:
+        return sum(trs) / max(len(trs), 1)
+
+    atr = sum(trs[:period]) / period
+    alpha = 1 / period
+    for tr in trs[period:]:
+        atr = alpha * tr + (1 - alpha) * atr
+    return atr
+
+
+def build_htf_liquidity_light(
+    closes,
+    highs,
+    lows,
+    structure: str,
+):
+    try:
+        swings = detect_swings(closes, highs, lows)
+        if not swings:
+            return {
+                "swing_highs": [],
+                "swing_lows": [],
+                "liquidity_bias": "balanced",
+            }
+
+        swing_highs, swing_lows = swings
+        swing_highs = swing_highs[-3:]
+        swing_lows = swing_lows[-3:]
+
+        price = closes[-1] if closes else None
+
+        bias = "balanced"
+        if price is not None and swing_highs and swing_lows:
+            last_high = swing_highs[-1][1]
+            last_low = swing_lows[-1][1]
+
+            dist_to_high = abs(last_high - price)
+            dist_to_low = abs(price - last_low)
+
+            if structure == "bullish":
+                bias = "above" if dist_to_high < dist_to_low else "below"
+            elif structure == "bearish":
+                bias = "below" if dist_to_low < dist_to_high else "above"
+            else:
+                bias = "balanced"
+
+        return {
+            "swing_highs": swing_highs,
+            "swing_lows": swing_lows,
+            "liquidity_bias": bias,
+        }
+    except Exception as e:
+        log_error(e)
+        return {
+            "swing_highs": [],
+            "swing_lows": [],
+            "liquidity_bias": "balanced",
+        }
+
+
+def detect_momentum_divergence(closes, momentum):
+    if len(closes) < 5 or len(momentum) < 5:
+        return None
+
+    price_hh = closes[-1] > closes[-2] > closes[-3]
+    price_ll = closes[-1] < closes[-2] < closes[-3]
+
+    mom_lh = momentum[-1] < momentum[-2] < momentum[-3]
+    mom_hl = momentum[-1] > momentum[-2] > momentum[-3]
+
+    if price_ll and mom_hl:
+        return "bullish"
+    if price_hh and mom_lh:
+        return "bearish"
+
+    return None
+
+
+async def compute_htf_context(session, symbol: str):
+    htf = {
+        "trend_15m": 0,
+        "trend_1h": 0,
+        "trend_4h": 0,
+        "structure_15m": "ranging",
+        "structure_1h": "ranging",
+        "structure_4h": "ranging",
+        "event_15m": None,
+        "event_1h": None,
+        "event_4h": None,
+        "strength_15m": 1,
+        "strength_1h": 1,
+        "strength_4h": 1,
+        "momentum_1h": 0.0,
+        "momentum_4h": 0.0,
+        "momentum_strength_1h": 0.0,
+        "momentum_strength_4h": 0.0,
+        "momentum_div_1h": None,
+        "momentum_div_4h": None,
+        "vol_regime_1h": "normal",
+        "vol_regime_4h": "normal",
+        "htf_liquidity_1h": {
+            "swing_highs": [],
+            "swing_lows": [],
+            "liquidity_bias": "balanced",
+        },
+        "htf_liquidity_4h": {
+            "swing_highs": [],
+            "swing_lows": [],
+            "liquidity_bias": "balanced",
+        },
+    }
+    try:
+        kl_15m = await fetch_klines(session, symbol, interval="15", limit=96)
+        kl_1h = await fetch_klines(session, symbol, interval="60", limit=96)
+        kl_4h = await fetch_klines(session, symbol, interval="240", limit=96)
+
+        htf["trend_15m"] = compute_htf_trend_from_klines(kl_15m)
+        htf["trend_1h"] = compute_htf_trend_from_klines(kl_1h)
+        htf["trend_4h"] = compute_htf_trend_from_klines(kl_4h)
+
+        if kl_15m:
+            s15 = compute_htf_structure(kl_15m)
+            htf["structure_15m"] = s15.get("structure", "ranging")
+            htf["event_15m"] = s15.get("event")
+            htf["strength_15m"] = s15.get("strength", 1)
+        if kl_1h:
+            s1h = compute_htf_structure(kl_1h)
+            htf["structure_1h"] = s1h.get("structure", "ranging")
+            htf["event_1h"] = s1h.get("event")
+            htf["strength_1h"] = s1h.get("strength", 1)
+        if kl_4h:
+            s4h = compute_htf_structure(kl_4h)
+            htf["structure_4h"] = s4h.get("structure", "ranging")
+            htf["event_4h"] = s4h.get("event")
+            htf["strength_4h"] = s4h.get("strength", 1)
+
+        def _compute_mom_vol(kl, key_prefix: str):
+            if not kl or len(kl) < 30:
+                return
+
+            closes = [float(c[4]) for c in kl][::-1]
+            highs = [float(c[2]) for c in kl][::-1]
+            lows = [float(c[3]) for c in kl][::-1]
+
+            ema5 = ema(closes, 5)
+            ema20 = ema(closes, 20)
+            if not ema5 or not ema20 or len(ema5) != len(closes) or len(ema20) != len(closes):
+                return
+
+            mom = ema5[-1] - ema20[-1]
+            atr = compute_atr_from_klines(kl)
+            price = closes[-1] if closes else 0.0
+
+            if atr > 0:
+                mom_strength = abs(mom) / atr
+            else:
+                mom_strength = 0.0
+
+            if price > 0 and atr > 0:
+                vol = atr / price * 100
+            else:
+                vol = 0.0
+
+            if vol < 0.4:
+                regime = "low_vol"
+            elif vol < 1.2:
+                regime = "normal"
+            elif vol < 2.5:
+                regime = "high_vol"
+            else:
+                regime = "chaotic"
+
+            htf[f"momentum_{key_prefix}"] = mom
+            htf[f"momentum_strength_{key_prefix}"] = mom_strength
+            htf[f"vol_regime_{key_prefix}"] = regime
+
+            div = detect_momentum_divergence(closes, ema5)
+            htf[f"momentum_div_{key_prefix}"] = div
+
+            structure = htf.get(f"structure_{key_prefix}", "ranging")
+            liq = build_htf_liquidity_light(
+                closes=closes,
+                highs=highs,
+                lows=lows,
+                structure=structure,
+            )
+            htf[f"htf_liquidity_{key_prefix}"] = liq
+
+        _compute_mom_vol(kl_1h, "1h")
+        _compute_mom_vol(kl_4h, "4h")
+
+    except Exception as e:
+        log_error(e)
+
+    return htf
+
+
+def evaluate_orderbook_quality(orderbook: dict | None, last_price: float) -> (bool, Dict[str, Any]):
+    """
+    Оценка качества ордербука.
+
+    Возвращает:
+        (ok: bool, meta: dict)
+    meta содержит:
+        - spread_pct
+        - total_vol_10
+        - imbalance
+        - score (0–100)
+    """
+    try:
+        if not orderbook:
+            return False, {
+                "spread_pct": 999.0,
+                "total_vol_10": 0.0,
+                "imbalance": 1.0,
+                "score": 0.0,
+            }
+
+        bids = orderbook.get("b", []) or orderbook.get("bids", [])
+        asks = orderbook.get("a", []) or orderbook.get("asks", [])
+
+        if not bids or not asks:
+            return False, {
+                "spread_pct": 999.0,
+                "total_vol_10": 0.0,
+                "imbalance": 1.0,
+                "score": 0.0,
+            }
+
+        best_bid = float(bids[0][0])
+        best_ask = float(asks[0][0])
+
+        spread = best_ask - best_bid
+        spread_pct = (spread / last_price) * 100 if last_price > 0 else 5.0
+
+        depth_bid_10 = sum(float(b[1]) for b in bids[:10])
+        depth_ask_10 = sum(float(a[1]) for a in asks[:10])
+        total_vol_10 = depth_bid_10 + depth_ask_10
+
+        total_depth = sum(float(b[1]) for b in bids[:5]) + sum(float(a[1]) for a in asks[:5])
+
+        if total_depth > 0:
+            imbalance = abs(depth_bid_10 - depth_ask_10) / max(total_depth, 1e-9)
+        else:
+            imbalance = 1.0
+
+        score = 100.0
+
+        if spread_pct > 0.2:
+            score -= min(40, spread_pct * 10)
+
+        if total_depth < 50000:
+            score -= 20
+
+        score -= imbalance * 20
+
+        score = max(0.0, min(score, 100.0))
+
+        meta = {
+            "spread_pct": round(spread_pct, 4),
+            "total_vol_10": float(total_vol_10),
+            "imbalance": float(imbalance),
+            "score": round(score, 2),
+        }
+
+        ok = score >= 40.0
+        return ok, meta
+
+    except Exception:
+        return False, {
+            "spread_pct": 999.0,
+            "total_vol_10": 0.0,
+            "imbalance": 1.0,
+            "score": 0.0,
+        }
+
+
+def _get_reversal_state(symbol: str, now_ts: float, ttl_sec: int) -> Dict[str, Any]:
+    state = get_symbol_state(symbol)
+    if not state:
+        return {}
+    ts = state.get("ts")
+    if not isinstance(ts, (int, float)):
+        return {}
+    if now_ts - ts > ttl_sec:
+        clear_symbol_state(symbol)
+        return {}
+    return state
+
+
+def _should_allow_reversal(
+    direction: str,
+    state: Dict[str, Any],
+    requires_state: bool,
+    min_score: int,
+    rating: float,
+    extra_min_bonus: int,
+    min_delay_bars: int,
+) -> bool:
+    if not requires_state:
+        return rating >= min_score
+    if not state:
+        return rating >= (min_score + extra_min_bonus)
+    state_type = state.get("type")
+    state_delay = int(state.get("delay_bars", 0))
+    if state_delay < min_delay_bars:
+        return False
+    if direction == "Dump → Pump":
+        return state_type == "dump"
+    if direction == "Pump → Dump":
+        return state_type == "pump"
+    return False
+
+
+def _passes_strict_reversal_filters(
+    strictness_level: str,
+    direction: str,
+    flow_status: str,
+    delta_status: str,
+    event_1h: Optional[str],
+    event_4h: Optional[str],
+    structure_1h: str,
+    structure_4h: str,
+) -> bool:
+    if strictness_level == "soft":
+        return True
+
+    require_structure = strictness_level == "strict"
+    require_event = strictness_level == "strict"
+
+    structure_ok = False
+    event_ok = False
+
+    if direction == "Dump → Pump":
+        if strictness_level == "strict" and (flow_status == "aggressive_sellers" or delta_status == "bearish"):
+            return False
+        structure_ok = structure_1h == "bullish" or structure_4h == "bullish"
+        event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
+    else:
+        if strictness_level == "strict" and (flow_status == "aggressive_buyers" or delta_status == "bullish"):
+            return False
+        structure_ok = structure_1h == "bearish" or structure_4h == "bearish"
+        event_ok = event_1h in ("BOS", "CHOCH") or event_4h in ("BOS", "CHOCH")
+
+    if strictness_level == "medium":
+        return structure_ok or event_ok
+
+    if require_structure and not structure_ok:
+        return False
+
+    if require_event and not event_ok:
+        return False
+    return True
+
+
+async def compute_btc_stability(session):
+    global _BTC_CTX_CACHE
+
+    now = time.time()
+    if now - _BTC_CTX_CACHE["ts"] < 30:
+        return _BTC_CTX_CACHE
+
+    try:
+        kl = await fetch_klines(session, "BTCUSDT", interval="1", limit=60)
+
+        if not kl or len(kl) < 20:
+            _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
+            return _BTC_CTX_CACHE
+
+        closes = [float(c[4]) for c in kl]
+
+        latest = closes[0]
+        lookback_index = 20 if len(closes) > 20 else len(closes) - 1
+        past = closes[lookback_index]
+
+        if past <= 0:
+            _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
+            return _BTC_CTX_CACHE
+
+        change_pct = (latest - past) / past * 100
+
+        diffs = []
+        for i in range(0, lookback_index):
+            prev = closes[i + 1]
+            curr = closes[i]
+            if prev > 0:
+                diffs.append(abs(curr - prev) / prev * 100)
+
+        volat = sum(diffs) / len(diffs) if diffs else 0.0
+
+        regime = "neutral"
+        factor = 1.0
+
+        if volat > 1.5:
+            factor = 0.85
+            regime = "high_vol"
+
+        if abs(change_pct) > 1.0 and volat < 2.0:
+            factor = 1.05
+            regime = "trending"
+
+        if abs(change_pct) < 0.3 and volat < 0.7:
+            factor = 1.15
+            regime = "ranging"
+
+        _BTC_CTX_CACHE = {
+            "ts": now,
+            "factor": factor,
+            "regime": regime
+        }
+        return _BTC_CTX_CACHE
+
+    except Exception as e:
+        log_error(e)
+        _BTC_CTX_CACHE = {"ts": now, "factor": 1.0, "regime": "neutral"}
+        return _BTC_CTX_CACHE
+
+
+# =====================================================
+# V31 CONTEXT BUILDERS FOR ELITE REVERSAL ENGINE
+# =====================================================
+
+def _build_v31_structure_ctx(
+    closes_1m: List[float],
+    highs_1m: List[float],
+    lows_1m: List[float],
+    volumes_1m: List[float],
+) -> Dict[str, Any]:
+    if len(closes_1m) < 10:
+        return {
+            "structure": "neutral",
+            "clarity_index": 0.0,
+            "impulse_strength": 0.0,
+        }
+
+    lookback = min(20, len(closes_1m) - 1)
+    c_now = closes_1m[0]
+    c_past = closes_1m[lookback]
+
+    if c_now > c_past * 1.004:
+        direction = "bullish"
+    elif c_now < c_past * 0.996:
+        direction = "bearish"
+    else:
+        direction = "neutral"
+
+    impulse = (c_now - c_past) / c_past * 100 if c_past > 0 else 0.0
+    impulse_norm = min(max(abs(impulse) / 4.0, 0.0), 1.0)
+
+    window = min(30, len(highs_1m))
+    recent_range = max(highs_1m[:window]) - min(lows_1m[:window])
+    avg_price = sum(closes_1m[:window]) / window
+    vol_pct = (recent_range / avg_price * 100) if avg_price > 0 else 0.0
+
+    clarity = 1.0 - min(vol_pct / 8.0, 1.0)
+    clarity = max(0.0, min(clarity, 1.0))
+
+    return {
+        "structure": direction,
+        "clarity_index": clarity,
+        "impulse_strength": impulse_norm,
+    }
+
+
+def _build_v31_regime_ctx(
+    closes_1m: List[float],
+    klines_1m: List[List[Any]],
+    vol_regime_1h: str,
+    vol_regime_4h: str,
+) -> Dict[str, Any]:
+    atr_1m = compute_atr_from_klines(klines_1m)
+    last_price = closes_1m[0] if closes_1m else 0.0
+    atr_pct = (atr_1m / last_price * 100) if last_price > 0 else 0.0
+
+    if atr_pct < 0.15:
+        atr_percentile = 0.25
+    elif atr_pct < 0.4:
+        atr_percentile = 0.5
+    elif atr_pct < 0.9:
+        atr_percentile = 0.7
+    else:
+        atr_percentile = 0.9
+
+    if vol_regime_1h in ("high_vol", "chaotic") or vol_regime_4h in ("high_vol", "chaotic"):
+        regime = "EXHAUSTION" if atr_percentile > 0.7 else "COMPRESSION"
+    elif vol_regime_1h == "low_vol" and vol_regime_4h == "low_vol":
+        regime = "LOW_VOL_RANGE"
+    else:
+        regime = "RANGE"
+
+    return {
+        "regime": regime,
+        "atr_percentile": atr_percentile,
+    }
+
+
+def _build_v31_htf_ctx(
+    trend_1h: float,
+    trend_4h: float,
+    momentum_div_1h: Optional[str],
+    momentum_div_4h: Optional[str],
+    structure_1h: str,
+    structure_4h: str,
+    event_1h: Optional[str],
+    event_4h: Optional[str],
+    htf_liq_1h: Dict[str, Any],
+    htf_liq_4h: Dict[str, Any],
+) -> Dict[str, Any]:
+    signed_trend_strength = (trend_1h * 0.4 + trend_4h * 0.6) / 100.0
+
+    if signed_trend_strength > 0.01:
+        bias = "bullish"
+    elif signed_trend_strength < -0.01:
+        bias = "bearish"
+    else:
+        bias = "neutral"
+
+    if abs(signed_trend_strength) > 0.04:
+        htf_regime = "HTF_STRONG_TREND"
+    elif abs(signed_trend_strength) > 0.018:
+        htf_regime = "HTF_TREND"
+    else:
+        htf_regime = "HTF_RANGE"
+
+    exhausted = False
+
+    if momentum_div_1h == "bearish" and bias == "bullish":
+        exhausted = True
+    if momentum_div_1h == "bullish" and bias == "bearish":
+        exhausted = True
+    if momentum_div_4h == "bearish" and bias == "bullish":
+        exhausted = True
+    if momentum_div_4h == "bullish" and bias == "bearish":
+        exhausted = True
+
+    if event_1h == "CHOCH" or event_4h == "CHOCH":
+        exhausted = True
+
+    alignment_score = 0.5
+    if bias == "bullish" and trend_1h > 0 and trend_4h > 0:
+        alignment_score = 0.7
+    elif bias == "bearish" and trend_1h < 0 and trend_4h < 0:
+        alignment_score = 0.7
+    elif bias == "neutral":
+        alignment_score = 0.5
+    else:
+        alignment_score = 0.4
+
+    return {
+        "bias": bias,
+        "htf_regime": htf_regime,
+        "signed_trend_strength": signed_trend_strength,
+        "exhausted": exhausted,
+        "alignment_score": alignment_score,
+        "htf_liq_1h": htf_liq_1h,
+        "htf_liq_4h": htf_liq_4h,
+    }
+
+
+def _map_reversal_direction_to_label(direction: Optional[str]) -> str:
+    if direction == "long":
+        return "Dump → Pump"
+    if direction == "short":
+        return "Pump → Dump"
+    return "neutral"
+
+
+# =====================================================
+# V31 ALIGNMENT & CONFIDENCE
+# =====================================================
+
+def apply_alignment_penalties_v31(
+    rating: float,
+    direction_side: str,
+    trend_1h: float,
+    trend_4h: float,
+    flow_status: str,
+    delta_status: str,
+    impulse_score: float,
+    htf_ctx: Dict[str, Any],
+) -> float:
+    """
+    Контекстный alignment:
+    - тренд 1h/4h
+    - HTF bias/exhausted
+    - flow/delta
+    - импульс
+    """
+    aligned_rating = float(rating)
+    bias = htf_ctx.get("bias", "neutral")
+    exhausted = bool(htf_ctx.get("exhausted", False))
+
+    same_dir_trend = (
+        (direction_side == "bullish" and trend_1h > 0 and trend_4h > 0) or
+        (direction_side == "bearish" and trend_1h < 0 and trend_4h < 0)
+    )
+    opposite_trend = (
+        (direction_side == "bullish" and trend_1h < 0 and trend_4h < 0) or
+        (direction_side == "bearish" and trend_1h > 0 and trend_4h > 0)
+    )
+
+    if same_dir_trend:
+        aligned_rating *= 1.05
+    if opposite_trend:
+        aligned_rating *= 0.92
+
+    if direction_side == "bullish":
+        if flow_status == "aggressive_buyers" or delta_status == "bullish":
+            aligned_rating *= 1.03
+        if flow_status == "aggressive_sellers" or delta_status == "bearish":
+            aligned_rating *= 0.94
+    elif direction_side == "bearish":
+        if flow_status == "aggressive_sellers" or delta_status == "bearish":
+            aligned_rating *= 1.03
+        if flow_status == "aggressive_buyers" or delta_status == "bullish":
+            aligned_rating *= 0.94
+
+    if exhausted:
+        aligned_rating *= 1.03
+
+    if abs(impulse_score) < 1.0:
+        aligned_rating *= 0.96
+    elif abs(impulse_score) > 4.0:
+        aligned_rating *= 1.03
+
+    return max(0.0, min(aligned_rating, 100.0))
+
+
+def amplify_confidence_v31(
+    base_conf: float,
+    rating: float,
+    adaptive_min_score: int,
+    btc_factor: float,
+    trend_1h: float,
+    trend_4h: float,
+    direction_side: str,
+    symbol_regime: Dict[str, Any] | None,
+    market_ctx: Dict[str, Any] | None,
+    filters_ok_ratio: float,
+) -> float:
+    """
+    Усиление confidence:
+    - насколько рейтинг выше adaptive_min_score
+    - BTC‑режим
+    - тренды 1h/4h
+    - symbol_regime / market_ctx
+    - filters_ok_ratio из SmartFilters
+    """
+    conf = float(base_conf)
+
+    margin = rating - adaptive_min_score
+    if margin > 0:
+        conf *= 1.0 + min(margin / 40.0, 0.25)
+    else:
+        conf *= 0.9
+
+    if btc_factor > 1.0:
+        conf *= 1.03
+    elif btc_factor < 0.95:
+        conf *= 0.97
+
+    same_dir_trend = (
+        (direction_side == "bullish" and trend_1h > 0 and trend_4h > 0) or
+        (direction_side == "bearish" and trend_1h < 0 and trend_4h < 0)
+    )
+    if same_dir_trend:
+        conf *= 1.04
+
+    regime_label = None
+    if isinstance(symbol_regime, dict):
+        regime_label = symbol_regime.get("regime")
+    if not regime_label and isinstance(market_ctx, dict):
+        regime_label = market_ctx.get("regime")
+
+    if regime_label in ("trend", "impulse"):
+        conf *= 1.03
+    elif regime_label in ("chop", "chaotic"):
+        conf *= 0.95
+
+    conf *= (0.9 + min(max(filters_ok_ratio, 0.0), 1.0) * 0.2)
+
+    return max(0.0, min(conf, 1.0))
+
+
+# =====================================================
+# CORE ANALYSIS
+# =====================================================
+
+def compute_impulse_score(closes_1m: List[float], volumes_1m: List[float]) -> float:
+    if len(closes_1m) < 5:
+        return 0.0
+    c0, c1 = closes_1m[0], closes_1m[1]
+    ret = (c0 - c1) / max(c1, 1e-7) * 100
+    vol0 = volumes_1m[0]
+    avg_vol = sum(volumes_1m[1:6]) / max(len(volumes_1m[1:6]), 1)
+    vol_factor = vol0 / max(avg_vol, 1e-7)
+    return ret * min(vol_factor, 3.0)
+
+
+async def analyze_symbol_async(session, symbol: str, min_score: int, ticker_info: dict):
+
+    print(f"[ENTER ANALYZE] {symbol}")
+
+    settings = load_settings()
+    now_ts = time.time()
+
+    reversal_state_ttl_sec = int(settings.get("reversal_state_ttl_sec", 7200))
+
+    strictness_level = str(settings.get("strictness_level", "soft")).lower()
+    if strictness_level not in ("soft", "medium", "strict"):
+        strictness_level = "strict"
+
+    mode_key, mode_cfg = get_current_mode()
+    mode_profile = get_mode_profile()
+    min_score = max(0, min_score + mode_profile["min_score_shift"])
+
+    if symbol_on_cooldown(symbol):
+        print(f"[CUT] {symbol} ON COOLDOWN")
+        return None
+
+    turnover = float(ticker_info.get("turnover24h", 0))
+    if turnover < mode_cfg["volume_usdt"]:
+        print(f"[CUT] {symbol} LOW TURNOVER {turnover} < {mode_cfg['volume_usdt']}")
+        return None
+
+    klines_1m = await fetch_klines(session, symbol, interval="1", limit=80)
+    klines_15m = await fetch_klines(session, symbol, interval="15", limit=80)
+
+    if not klines_15m or len(klines_15m) < 40:
+        return None
+
+    if not klines_1m:
+        print(f"[CUT] {symbol} NO KLINES")
+        return None
+
+    if len(klines_1m) < 40:
+        print(f"[CUT] {symbol} NOT ENOUGH CANDLES {len(klines_1m)}")
+        return None
+
+    closes_1m = [float(c[4]) for c in klines_1m]
+    highs_1m = [float(c[2]) for c in klines_1m]
+    lows_1m = [float(c[3]) for c in klines_1m]
+    volumes_1m = [float(c[5]) for c in klines_1m]
+
+    latest_close = closes_1m[0]
+    last_price = latest_close
+
+    light_rating = 60
+    if light_rating < 55:
+        return None
+
+    orderbook = await fetch_orderbook(session, symbol, limit=50)
+    ob_ok, ob_meta = evaluate_orderbook_quality(orderbook, last_price)
+    if not ob_ok:
+        log_blocked_signal(
+            symbol,
+            "orderbook_quality",
+            f"spread={ob_meta.get('spread_pct', 0):.2f}%, vol={ob_meta.get('total_vol_10', 0):.0f}"
+        )
+        return None
+
+    liquidity = build_liquidity_map(orderbook, last_price) if orderbook else {}
+    liq_bias = liquidity.get("bias")
+    liq_strongest = liquidity.get("strongest_zone")
+    liq_vac_up = liquidity.get("vacuum_up", 0)
+    liq_vac_down = liquidity.get("vacuum_down", 0)
+
+    oi_now, oi_prev = await fetch_open_interest(session, symbol)
+    oi_status = None
+    if oi_now is not None and oi_prev is not None:
+        if oi_now > oi_prev * 1.03:
+            oi_status = "rising"
+        elif oi_now < oi_prev * 0.97:
+            oi_status = "falling"
+        else:
+            oi_status = "flat"
+
+    funding_rate = await fetch_funding_rate(session, symbol)
+
+    long_liq, short_liq = await fetch_liquidations(session, symbol, minutes=15)
+    liq_status = interpret_liquidations(long_liq, short_liq)
+
+    trades = await fetch_recent_trades(session, symbol, limit=200)
+    trades_sorted = trades[::-1] if trades else []
+
+    flow_status = analyze_flow_from_trades(trades_sorted)
+    delta_status = analyze_delta_from_trades(trades_sorted)
+
+    clusters = build_price_buckets(trades_sorted)
+    micro = analyze_microstructure(clusters, last_price)
+
+    current_high = highs_1m[0]
+    current_low = lows_1m[0]
+    footprint_zones = compute_footprint_zones(trades_sorted, current_high, current_low)
+
+    trend_score = await compute_trend_score(session, symbol)
+
+    USE_HTF_THRESHOLD = 60
+
+    if light_rating < USE_HTF_THRESHOLD:
+        trend_15m = trend_1h = trend_4h = 0
+        structure_15m = structure_1h = structure_4h = "ranging"
+        event_15m = event_1h = event_4h = None
+        strength_15m = strength_1h = strength_4h = 0
+
+        momentum_1h = momentum_4h = 0
+        momentum_strength_1h = momentum_strength_4h = 0
+        vol_regime_1h = vol_regime_4h = "normal"
+        momentum_div_1h = momentum_div_4h = None
+
+        htf_liq_1h = {}
+        htf_liq_4h = {}
+
+    else:
+        htf = await compute_htf_context(session, symbol)
+
+        trend_15m = htf["trend_15m"]
+        trend_1h = htf["trend_1h"]
+        trend_4h = htf["trend_4h"]
+
+        structure_15m = htf["structure_15m"]
+        structure_1h = htf["structure_1h"]
+        structure_4h = htf["structure_4h"]
+
+        event_15m = htf["event_15m"]
+        event_1h = htf["event_1h"]
+        event_4h = htf["event_4h"]
+
+        strength_15m = htf["strength_15m"]
+        strength_1h = htf["strength_1h"]
+        strength_4h = htf["strength_4h"]
+
+        momentum_1h = htf.get("momentum_1h", 0.0)
+        momentum_4h = htf.get("momentum_4h", 0.0)
+        momentum_strength_1h = htf.get("momentum_strength_1h", 0.0)
+        momentum_strength_4h = htf.get("momentum_strength_4h", 0.0)
+
+        vol_regime_1h = htf.get("vol_regime_1h", "normal")
+        vol_regime_4h = htf.get("vol_regime_4h", "normal")
+
+        momentum_div_1h = htf.get("momentum_div_1h")
+        momentum_div_4h = htf.get("momentum_div_4h")
+
+        htf_liq_1h = htf.get("htf_liquidity_1h", {}) or {}
+        htf_liq_4h = htf.get("htf_liquidity_4h", {}) or {}
+
+    risk_score = compute_risk_score(
+        closes_1m,
+        oi_status,
+        funding_rate,
+        liq_status,
+        flow_status,
+        delta_status,
+        trend_score,
+    )
+
+    impulse_score = compute_impulse_score(closes_1m, volumes_1m)
+
+    btc_ctx = await compute_btc_stability(session)
+
+    btc_regime = btc_ctx.get("regime", "neutral")
+    btc_factor = btc_ctx.get("factor", 1.0)
+    btc_factor = max(0.85, min(btc_factor, 1.15))
+
+    reversal_state = _get_reversal_state(symbol, now_ts, reversal_state_ttl_sec)
+
+    asset_profile = asset_engine.analyze(
+        closes_1m,
+        highs_1m,
+        lows_1m,
+    )
+
+    asset_class = asset_profile.get("asset_class", "mid")
+
+    strategy = strategy_selector.choose(btc_regime, asset_class)
+
+    base_min_score = strategy_selector.get_min_score(
+        btc_regime,
+        asset_class
+    )
+
+    adaptive_min_score = int(
+        (base_min_score + mode_profile["min_score_shift"]) * btc_factor
+    )
+
+    adaptive_min_score = max(40, min(adaptive_min_score, 80))
+
+    print(
+        f"[MIN SCORE] {symbol} "
+        f"base={base_min_score} "
+        f"btc_factor={btc_factor:.3f} "
+        f"adaptive={adaptive_min_score}"
+    )
+
+    # =====================================================
+    # V31 REVERSAL ENGINE — DETECTION PHASE
+    # =====================================================
+
+    rev = {"reversal": None, "rating": 0}
+
+    structure_ctx = _build_v31_structure_ctx(
+        closes_1m=closes_1m,
+        highs_1m=highs_1m,
+        lows_1m=lows_1m,
+        volumes_1m=volumes_1m,
+    )
+
+    regime_ctx = _build_v31_regime_ctx(
+        closes_1m=closes_1m,
+        klines_1m=klines_1m,
+        vol_regime_1h=vol_regime_1h,
+        vol_regime_4h=vol_regime_4h,
+    )
+
+    htf_ctx = _build_v31_htf_ctx(
+        trend_1h=trend_1h,
+        trend_4h=trend_4h,
+        momentum_div_1h=momentum_div_1h,
+        momentum_div_4h=momentum_div_4h,
+        structure_1h=structure_1h,
+        structure_4h=structure_4h,
+        event_1h=event_1h,
+        event_4h=event_4h,
+        htf_liq_1h=htf_liq_1h,
+        htf_liq_4h=htf_liq_4h,
+    )
+
+    # --- DEBUG: показать входные данные движка ---
+    if DEBUG_ROUTER:
+        print("STRUCTURE_CTX:", structure_ctx)
+        print("REGIME_CTX:", regime_ctx)
+        print("HTF_CTX:", {
+            "bias": htf_ctx.get("bias"),
+            "signed_trend_strength": htf_ctx.get("signed_trend_strength"),
+            "exhausted": htf_ctx.get("exhausted"),
+            "alignment_score": htf_ctx.get("alignment_score"),
+        })
+
+    # --- MAIN CALL ---
+    eval_result = reversal_engine.evaluate(
+        structure=structure_ctx,
+        regime=regime_ctx,
+        htf=htf_ctx,
+    )
+
+    # --- DEBUG: показать результат движка ---
+    if DEBUG_ROUTER:
+        print("EVAL_RESULT:", eval_result)
+
+
+    # --- CORRECT HANDLING OF V31.5 OUTPUT ---
+    if eval_result:
+        direction = eval_result["signal"]          # "long" / "short"
+        quality = float(eval_result["quality"])    # 0.0–1.0
+        direction_label = _map_reversal_direction_to_label(direction)
+
+        rev = {
+            "reversal": direction_label,
+            "rating": int(round(quality * 100)),   # convert to 0–100 scale
+        }
+    else:
+        direction = None
+        quality = 0.0
+        rev = {"reversal": None, "rating": 0}
+
+    # =====================================================
+    # V31.6 TREND ENGINE — DETECTION PHASE
+    # =====================================================
+
+    trend_eval = trend_engine.evaluate(
+        structure=structure_ctx,
+        regime=regime_ctx,
+        htf=htf_ctx,
+    )
+
+    if DEBUG_ROUTER:
+        print("TREND_EVAL:", trend_eval)
+
+    trend_signal = None
+    trend_rating = 0
+
+    if trend_eval:
+        trend_signal = trend_eval["signal"]
+        trend_quality = float(trend_eval["quality"])
+        trend_rating = int(round(trend_quality * 100))
+        
+    # =====================================================
+    # SIGNAL SELECTION LOGIC (REVERSAL vs TREND)
+    # =====================================================
+
+    final_signal = None
+    final_rating = 0
+    final_type = None
+
+    if rev["rating"] >= trend_rating and rev["rating"] > 0:
+        final_signal = rev["reversal"]
+        final_rating = rev["rating"]
+        final_type = "reversal"
+
+    elif trend_rating > rev["rating"]:
+        final_signal = trend_signal
+        final_rating = trend_rating
+        final_type = "trend"
+
+    else:
+        final_signal = None
+        final_rating = 0
+        final_type = None
+
+    if DEBUG_ROUTER:
+        print(f"[SELECTED] type={final_type} signal={final_signal} rating={final_rating}")
+
+
+    # =====================================================
+    # ADAPTIVE SCORING ENGINE V31
+    # =====================================================
+
+    raw_rating = rev.get("rating", 0)
+
+    if DEBUG_ROUTER:
+        print("Raw rating BEFORE weighting:", raw_rating)
+
+    # base weighting
+    weighted_rating = raw_rating * 0.85 + 15
+
+    if rev.get("reversal"):
+
+        # BTC regime adjustments
+        if btc_regime == "trending":
+            weighted_rating *= 1.07
+        elif btc_regime == "ranging":
+            weighted_rating *= 1.05
+        elif btc_regime == "high_vol":
+            weighted_rating *= 0.95
+
+        # pump/dump state
+        if reversal_state:
+            state_type = reversal_state.get("type")
+            if state_type in ("pump", "dump"):
+                weighted_rating *= 1.07
+
+        # volatility adjustment
+        if len(highs_1m) >= 20:
+            recent_range = max(highs_1m[:20]) - min(lows_1m[:20])
+            avg_price = sum(closes_1m[:20]) / 20
+            volatility_pct = (recent_range / avg_price) * 100 if avg_price > 0 else 0
+
+            if volatility_pct < 0.35:
+                weighted_rating *= 0.96
+            elif volatility_pct > 1.3:
+                weighted_rating *= 1.03
+
+        direction_label = rev.get("reversal")
+
+        # liquidity bias
+        if direction_label in ("Dump → Pump", "bullish") and liq_bias == "below":
+            weighted_rating *= 1.04
+
+        if direction_label in ("Pump → Dump", "bearish") and liq_bias == "above":
+            weighted_rating *= 1.04
+
+        # majors bonus
+        if asset_class == "major":
+            weighted_rating *= 1.03
+
+        # BTC ranging bonus
+        if btc_regime == "ranging":
+            weighted_rating *= 1.05
+
+    # final normalization
+    weighted_rating = int(
+        max(0, min(weighted_rating * 0.95 + raw_rating * 0.05, 100))
+    )
+
+    print(f"[RAW PASS] {symbol} weighted={weighted_rating} min={adaptive_min_score}")
+
+    if weighted_rating >= adaptive_min_score:
+        rev["rating"] = weighted_rating
+    else:
+        print(f"[CUT] {symbol} BELOW THRESHOLD weighted={weighted_rating} < {adaptive_min_score}")
+        rev = {"reversal": None, "rating": weighted_rating}
+
+    if rev.get("reversal"):
+        print(
+            f"[DEBUG PASS RAW] {symbol} rating={weighted_rating} "
+            f"adaptive_min={adaptive_min_score}")
+
+    if DEBUG_ROUTER:
+        print("\n========== ROUTER DEBUG ==========")
+        print("Symbol:", symbol)
+        print("BTC regime:", btc_regime)
+        print("Strategy:", strategy)
+        print("Asset class:", asset_class)
+        print("Base min score:", base_min_score)
+        print("Adaptive min score:", adaptive_min_score)
+        print("Raw rating:", raw_rating)
+        print("Weighted rating:", weighted_rating)
+        print("Direction:", rev.get("reversal"))
+        if rev.get("reversal"):
+            print("Reversal passed V31 engine")
+        else:
+            print("No reversal signal")
+        print("==================================\n")
+
+    # =====================================================
+    # FINAL SIGNAL BUILDING (v30-compatible, FIXED)
+    # =====================================================
+
+    # eval_result = результат роутера
+    # он содержит: {"signal": "long/short", "quality": X, "type": "trend/reversal"}
+
+    if eval_result:
+        final_type = eval_result.get("type")          # "trend" / "reversal"
+        final_signal = eval_result.get("signal")      # "long" / "short"
+    else:
+        final_type = None
+        final_signal = None
+
+    # если роутер ничего не выбрал → нет сигнала
+    if not final_type or final_rating <= 0:
+        print(f"[CUT] {symbol} NO FINAL SIGNAL AFTER ROUTER")
+        return None
+
+    # Базовый объект сигнала
+    signal = {
+        "symbol": symbol,
+        "price": last_price,
+        "rating": final_rating,
+        "oi": oi_status,
+        "funding": funding_rate,
+        "liq": liq_status,
+        "flow": flow_status,
+        "delta": delta_status,
+        "trend_score": trend_score,
+        "risk_score": risk_score,
+        "trend_15m": trend_15m,
+        "trend_1h": trend_1h,
+        "trend_4h": trend_4h,
+        "meta_klines_15m": klines_15m,
+        "meta_closes": closes_1m,
+        "meta_highs": highs_1m,
+        "meta_lows": lows_1m,
+    }
+
+    # Добавляем SmartFilters данные
+    signal["confidence"] = amplified_conf
+    signal["quality"] = raw_conf
+    signal["symbol_regime"] = symbol_regime
+    signal["market_ctx"] = market_ctx
+
+    # =====================================================
+    # REVERSAL SIGNAL
+    # =====================================================
+    if final_type == "reversal":
+        direction_label = rev.get("reversal")
+
+        if direction_label in ("Dump → Pump", "bullish"):
+            final_label = "Dump → Pump"
+            emoji = "🔵"
+            signal_direction = "long"
+        else:
+            final_label = "Pump → Dump"
+            emoji = "🔴"
+            signal_direction = "short"
+
+        signal["type"] = f"REVERSAL {final_label} ({mode_key})"
+        signal["emoji"] = emoji
+        signal["signal"] = signal_direction
+
+    # =====================================================
+    # TREND SIGNAL
+    # =====================================================
+    elif final_type == "trend":
+        if final_signal == "long":
+            final_label = "TREND LONG"
+            emoji = "🟢"
+        else:
+            final_label = "TREND SHORT"
+            emoji = "🔻"
+
+        signal["type"] = f"{final_label} ({mode_key})"
+        signal["emoji"] = emoji
+        signal["signal"] = final_signal
+
+    # =====================================================
+    # RETURN FINAL SIGNAL
+    # =====================================================
+    return signal
+
+
+    # =====================================================
+    # SMART FILTERS V3.8 ELITE + ALIGNMENT + AMPLIFY
+    # =====================================================
+
+    symbol_mem = get_symbol_memory(symbol)
+    symbol_profile = symbol_mem.get("profile", {}) if symbol_mem else {}
+
+    for c in candidates:
+
+        direction_side = infer_direction_side(c["type"])
+
+        sf3 = apply_smartfilters_v3(
+            symbol=symbol,
+            base_rating=int(c["rating"]),
+            direction_side=direction_side,
+            closes_1m=closes_1m,
+            klines_1m=klines_1m,
+            trend_score=trend_score,
+            trend_15m=trend_15m,
+            trend_1h=trend_1h,
+            trend_4h=trend_4h,
+            liquidity_bias=liq_bias,
+            noise_level=None,
+            btc_ctx=btc_ctx,
+            extra_filters_ok={"min_score_ok": c["rating"] >= adaptive_min_score},
+            global_risk_proxy=None,
+        )
+
+        c["rating"] = max(0, min(int(sf3["final_rating"]), 100))
+
+        aligned = apply_alignment_penalties_v31(
+            rating=c["rating"],
+            direction_side=direction_side,
+            trend_1h=trend_1h,
+            trend_4h=trend_4h,
+            flow_status=flow_status,
+            delta_status=delta_status,
+            impulse_score=impulse_score,
+            htf_ctx=htf_ctx,
+        )
+
+        c["rating"] = max(0, min(int(aligned), 100))
+
+        raw_conf = sf3["confidence"]
+        smoothed_conf = smooth_confidence(symbol, raw_conf)
+
+        conf_meta = sf3.get("confidence_meta", {}) or {}
+        filters_ok_ratio = conf_meta.get("filters_ok_ratio", 0.0)
+
+        symbol_regime = sf3.get("symbol_regime") or {}
+        market_ctx = sf3.get("market_ctx") or {}
+
+        amplified_conf = amplify_confidence_v31(
+            base_conf=smoothed_conf,
+            rating=c["rating"],
+            adaptive_min_score=adaptive_min_score,
+            btc_factor=btc_factor,
+            trend_1h=trend_1h,
+            trend_4h=trend_4h,
+            direction_side=direction_side,
+            symbol_regime=symbol_regime,
+            market_ctx=market_ctx,
+            filters_ok_ratio=filters_ok_ratio,
+        )
+
+        c["confidence"] = amplified_conf
+        c["symbol_regime"] = symbol_regime
+        c["market_ctx"] = market_ctx
+
+        alignment_score = conf_meta.get("trend_consistency_bonus", 0.0)
+
+        print(f"[FILTER CHECK] {symbol} filters={filters_ok_ratio:.2f}")
+        print(
+            f"[DEBUG] {symbol} | "
+            f"light={light_rating:.1f} | "
+            f"conf={amplified_conf:.2f} | "
+            f"align={alignment_score:.2f} | "
+            f"filters={filters_ok_ratio:.2f}"
+        )
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x["rating"], reverse=True)
+    best = candidates[0]
+
+    atr_1m = compute_atr_from_klines(klines_1m)
+
+    snapshot = {
+        "atr_1m": atr_1m,
+        "trend_score": trend_score,
+        "btc_factor": btc_factor,
+    }
+
+    updated_mem = update_symbol_memory(symbol, snapshot)
+    best["symbol_memory"] = updated_mem
+
+    log_signal(best)
+    mark_symbol_signal(symbol)
+
+    return best
+
+
+# =====================================================
+# SCANNER LOOP V31
+# =====================================================
+
+async def scanner_loop(send_text, send_photo, min_score: int, engine=None):
+
+    async with aiohttp.ClientSession() as session:
+        print("🚀 scanner_loop started")
+
+        while True:
+            print("🔄 scanning iteration...")
+
+            try:
+                tickers = await fetch_tickers(session)
+
+                tickers = sorted(
+                    tickers,
+                    key=lambda x: float(x.get("turnover24h", 0)),
+                    reverse=True
+                )
+
+                usdt_tickers = [
+                    t for t in tickers
+                    if t.get("symbol", "").endswith("USDT")
+                ]
+
+                if min_score >= 70:
+                    scan_limit = 40
+                elif min_score >= 60:
+                    scan_limit = 70
+                else:
+                    scan_limit = 100
+
+                filtered = []
+
+                for t in usdt_tickers:
+                    try:
+                        turnover = float(t.get("turnover24h", 0))
+                        price_change = abs(float(t.get("price24hPcnt", 0)))
+
+                        if turnover < 1_500_000:
+                            continue
+
+                        if price_change < 0.002:
+                            continue
+
+                        filtered.append(t)
+
+                    except Exception:
+                        continue
+
+                symbols = [
+                    (t["symbol"], t)
+                    for t in filtered[:scan_limit]
+                ]
+
+                print(f"Scan depth: {scan_limit} symbols")
+                print(f"Scanning {len(symbols)} symbols")
+
+                semaphore = asyncio.Semaphore(10)
+
+                async def limited_analyze(symbol, tinfo):
+                    async with semaphore:
+                        return await analyze_symbol_async(
+                            session,
+                            symbol,
+                            min_score,
+                            tinfo
+                        )
+
+                tasks = [
+                    limited_analyze(s, tinfo)
+                    for s, tinfo in symbols
+                ]
+
+                try:
+                    results = await asyncio.wait_for(
+                        asyncio.gather(*tasks, return_exceptions=True),
+                        timeout=45
+                    )
+                except asyncio.TimeoutError:
+                    print("⚠️ Symbol analysis timeout — skipping iteration")
+                    await asyncio.sleep(1)
+                    continue
+
+                for r in results:
+                    if isinstance(r, Exception):
+                        print("Symbol error:", repr(r))
+
+                results = [
+                    r for r in results
+                    if isinstance(r, dict) and r.get("type")
+                ]
+
+                if min_score >= 70:
+                    MIN_SIGNAL_CONFIDENCE = 0.60
+                elif min_score >= 60:
+                    MIN_SIGNAL_CONFIDENCE = 0.55
+                else:
+                    MIN_SIGNAL_CONFIDENCE = 0.50
+
+                if min_score >= 70:
+                    SIGNALS_PER_ITERATION_LIMIT = 1
+                elif min_score >= 60:
+                    SIGNALS_PER_ITERATION_LIMIT = 2
+                else:
+                    SIGNALS_PER_ITERATION_LIMIT = 3
+
+                print(f"Signal limit: {SIGNALS_PER_ITERATION_LIMIT}")
+                print(f"Min confidence required: {MIN_SIGNAL_CONFIDENCE}")
+
+                for r in results:
+                    if isinstance(r, dict) and r.get("type"):
+                        print(
+                            f"[CONF CHECK] {r['symbol']} "
+                            f"conf={r.get('confidence'):.3f} "
+                            f"min_conf={MIN_SIGNAL_CONFIDENCE}"
+                        )
+
+                signals = [
+                    r for r in results
+                    if isinstance(r, dict)
+                    and r.get("type")
+                    and r.get("confidence", 0) >= MIN_SIGNAL_CONFIDENCE
+                ]
+
+                print(f"Signals after quality filter: {len(signals)}")
+
+                if signals:
+                    signals = sorted(
+                        signals,
+                        key=lambda x: x.get("rating", 0),
+                        reverse=True
+                    )[:SIGNALS_PER_ITERATION_LIMIT]
+
+                    print(f"Signals found: {len(signals)}")
+
+                    for s in signals:
+
+                        if not s.get("meta_klines_15m"):
+                            print(f"[CHART CUT] {s['symbol']} no 15m klines")
+                            continue
+
+                        symbol_regime = s.get("symbol_regime") or {}
+                        market_ctx = s.get("market_ctx") or {}
+
+                        regime_label = symbol_regime.get("regime", str(symbol_regime))
+                        market_label = market_ctx.get("regime", str(market_ctx))
+
+                        text = (
+                            f"{s['emoji']} {s['type']} — {s['symbol']}\n\n"
+                            f"💰 Цена: {s['price']:.4f} USDT\n"
+                            f"📊 Рейтинг: {s['rating']}/100\n"
+                            f"⚡ Confidence: {s.get('confidence','n/a')}\n\n"
+                            f"📈 Trend score: {s.get('trend_score')}\n"
+                            f"📉 Risk score: {s.get('risk_score')}\n\n"
+                            f"🧠 Flow: {s.get('flow')}\n"
+                            f"🔀 Delta: {s.get('delta')}\n"
+                            f"💦 Liquidity: {s.get('liq')}\n"
+                            f"🏦 OI: {s.get('oi')}\n"
+                            f"💸 Funding: {s.get('funding')}\n\n"
+                            f"🕒 15m: {s.get('trend_15m')}\n"
+                            f"🕒 1h: {s.get('trend_1h')}\n"
+                            f"🕒 4h: {s.get('trend_4h')}\n\n"
+                            f"🧬 Market ctx: {market_label}\n"
+                            f"🧠 Memory regime: {regime_label}"
+                        )
+
+                        chart = generate_candle_chart(
+                            klines=s.get("meta_klines_15m"),
+                            symbol=s["symbol"],
+                            timeframe_label="15m"
+                        )
+
+                        if chart:
+                            photo = BufferedInputFile(
+                                chart.getvalue(),
+                                filename=f"{s['symbol']}.png"
+                            )
+                            await send_photo(photo, text)
+                            chart.close()
+                        else:
+                            await send_text(text)
+
+                        if engine is not None:
+                            await engine.on_signal(s)
+
+                await asyncio.sleep(1)
+
+            except Exception as e:
+                print("Scanner loop error:", repr(e))
+                log_error(e)
+                await asyncio.sleep(5)
